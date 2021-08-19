@@ -548,7 +548,7 @@ bool ttim_is_stopped( TTIM_HND_T hnd )
    @param hnd       Timer handler
    @return bool     true/false
  */
-TTIM_STATIC bool ttim_is_timedout( TTIM_HND_T hnd )
+bool ttim_is_timedout( TTIM_HND_T hnd )
 {
 	bool rv;
 	TTIM_CRITICAL_START();
