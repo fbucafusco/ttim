@@ -241,10 +241,10 @@ void test_TTIM_0()
     print_tim_list();   //1
 
 #if TTIM_PERIODIC_TICK==0
-    TEST_ASSERT_EQUAL( 5,  _ttim_remaining_time( hnd_group[0] ) );
-    TEST_ASSERT_EQUAL( 15,  _ttim_remaining_time( hnd_group[1] ) );
-    TEST_ASSERT_EQUAL( 25,  _ttim_remaining_time( hnd_group[2] ) );
-    TEST_ASSERT_EQUAL( 3,  _ttim_remaining_time( hnd_group[3] ) );
+    TEST_ASSERT_EQUAL( 5, _ttim_remaining_time( hnd_group[0] ) );
+    TEST_ASSERT_EQUAL( 15, _ttim_remaining_time( hnd_group[1] ) );
+    TEST_ASSERT_EQUAL( 25, _ttim_remaining_time( hnd_group[2] ) );
+    TEST_ASSERT_EQUAL( 3, _ttim_remaining_time( hnd_group[3] ) );
 #endif
 
     /* hnd_group[1] restarts with a different time. The running list updates all its remining_to time values */
@@ -253,10 +253,10 @@ void test_TTIM_0()
     print_tim_list();   //2
 
 #if TTIM_PERIODIC_TICK==0
-    TEST_ASSERT_EQUAL( 5,  _ttim_remaining_time( hnd_group[0] ) );
-    TEST_ASSERT_EQUAL( 2,  _ttim_remaining_time( hnd_group[1] ) );
+    TEST_ASSERT_EQUAL( 5, _ttim_remaining_time( hnd_group[0] ) );
+    TEST_ASSERT_EQUAL( 2, _ttim_remaining_time( hnd_group[1] ) );
     TEST_ASSERT_EQUAL( 25, _ttim_remaining_time( hnd_group[2] ) );
-    TEST_ASSERT_EQUAL( 3,  _ttim_remaining_time( hnd_group[3] ) );
+    TEST_ASSERT_EQUAL( 3, _ttim_remaining_time( hnd_group[3] ) );
 #endif
 
     /* Add 1 tick, the running list keep intact all its remining_to time values */
@@ -328,7 +328,7 @@ void test_TTIM_1()
     ttim_start( hnd_group[0] );
 
     TEST_ASSERT_FALSE( ttim_is_stopped( hnd_group[0] ) );
-    TEST_ASSERT_TRUE( ttim_is_stopped( hnd_group[1] ) );
+    TEST_ASSERT_TRUE( ttim_is_timedout( hnd_group[1] ) );
 
     TEST_ASSERT_EQUAL( 0, isr_dis );;
 
@@ -347,8 +347,8 @@ void test_TTIM_1()
     /* hnd_group[1] must timeout*/
     simulate_ticks( 6 );
 
-    TEST_ASSERT_FALSE( ttim_is_stopped( hnd_group[0] ) );
-    TEST_ASSERT_TRUE( ttim_is_stopped( hnd_group[1] ) );
+    TEST_ASSERT_FALSE( ttim_is_stopped( hnd_group[0] )  );
+    TEST_ASSERT_TRUE(  ttim_is_timedout( hnd_group[1] ) );
 
     TEST_ASSERT_EQUAL( 0,  activations[0] );
     TEST_ASSERT_EQUAL( 1,  activations[1] );
@@ -618,7 +618,7 @@ void test_TTIM_5()
 
     TEST_ASSERT_FALSE( _ttim_time_is_valid( ttim_get_remining_time( hnd_group[0] ) ) );
     TEST_ASSERT_FALSE( _ttim_time_is_valid( ttim_get_remining_time( hnd_group[1] ) ) );
-    TEST_ASSERT_EQUAL( 24,  ttim_get_remining_time( hnd_group[2] ) );
+    TEST_ASSERT_EQUAL( 24, ttim_get_remining_time( hnd_group[2] ) );
     TEST_ASSERT_FALSE( _ttim_time_is_valid( ttim_get_remining_time( hnd_group[3] ) ) );
 
     /* resumes timer hnd_group[0] */
@@ -640,9 +640,6 @@ void test_TTIM_5()
 void test_TTIM_6()
 {
     PRINTF( "%s ------------------------------- \n\n", __FUNCTION__ );
-
-
-
 
     ttim_set( hnd_group[0], 10, NULL, NULL );
     ttim_set( hnd_group[1], 5, NULL, NULL );
@@ -1008,9 +1005,6 @@ void test_TTIM_11()
 {
     PRINTF( "%s ------------------------------- \n\n", __FUNCTION__ );
 
-
-
-
     ttim_set( hnd_group[0], 10, tim_callback, NULL );
     ttim_set( hnd_group[2], 40, tim_callback, NULL );
 
@@ -1055,6 +1049,40 @@ void test_TTIM_11()
 }
 
 
+
+/**
+   @brief tries ttim_is_timedout and some state machine transition
+ */
+void test_TTIM_12()
+{
+    PRINTF( "%s ------------------------------- \n\n", __FUNCTION__ );
+
+    ttim_set( hnd_group[0], 40, NULL, NULL );
+    ttim_set( hnd_group[1], 21, NULL, NULL );
+    ttim_set( hnd_group[2], 13, NULL, NULL );
+
+    /* starts  */
+    ttim_start( hnd_group[0] );
+    ttim_start( hnd_group[1] );
+    ttim_start( hnd_group[2] );
+
+    simulate_ticks( 15 );
+
+    TEST_ASSERT_FALSE( ttim_is_timedout( hnd_group[0] ) );
+    TEST_ASSERT_FALSE( ttim_is_timedout( hnd_group[1] ) );
+    TEST_ASSERT_TRUE(  ttim_is_timedout( hnd_group[2] )  );
+
+    ttim_start( hnd_group[2] );
+
+    TEST_ASSERT_EQUAL( 25, ttim_get_remining_time( hnd_group[0] ) );
+    TEST_ASSERT_EQUAL( 6, ttim_get_remining_time( hnd_group[1] ) );
+    TEST_ASSERT_EQUAL( 13, ttim_get_remining_time( hnd_group[2] ) );
+
+    TEST_ASSERT_FALSE( ttim_is_timedout( hnd_group[0] ) );
+    TEST_ASSERT_FALSE( ttim_is_timedout( hnd_group[1] ) );
+    TEST_ASSERT_FALSE(  ttim_is_timedout( hnd_group[2] )  );
+}
+
 #if 0
 /**
    @brief Main test function
@@ -1064,6 +1092,8 @@ void test_TTIM_11()
 int main()
 {
     UNITY_BEGIN();
+
+    RUN_TEST( test_TTIM_12 );
 
     RUN_TEST( test_TTIM_0a );
     RUN_TEST( test_TTIM_0  );

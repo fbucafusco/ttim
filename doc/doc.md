@@ -2,7 +2,9 @@
 
 This library provides interfaces for create software timers within baremetal programming.
 
-For running timers, it implements a list were the first element is the timer with the nearest timeo timeout value. That allows to process each tick interrupt in O(1) time complexity, for any number of running timers.
+For running timers, the library it implements a list were the first element is the timer with the nearest timeo timeout value. That allows to process each tick interrupt with O(1) time complexity, for any number of running timers.
+
+The each timer timeout event, the user can choose which interface to have with the application. If the user choose to use a polled arquitecture, it should use *ttim_is_timedout* function within the main superloop. If it chose using callbacks, the user should provide those callback funtions to *ttim_set* or *ttim_set_n_start* functions. Callbacks are called in ISR context.
 
 ## **API**
 
@@ -16,6 +18,7 @@ For running timers, it implements a list were the first element is the timer wit
 - **ttim_stop**: Stops the timer.
 - **ttim_pause**: Pauses the timer.
 - **ttim_reset_n_restart**: Resets the countdown, an restarts the timer.
+- **ttim_is_timedout**: Returns if the timer is timedout.
 - **ttim_is_stopped**: Returns if the timer is stopped.
 - **ttim_get_remining_time**: Returns the remaining time for a started timer.
 - **ttim_update**: Funcion that should be called within the hardware timer isr.
@@ -25,7 +28,7 @@ For running timers, it implements a list were the first element is the timer wit
 The configuration is made by including in the project the file **tracker_config.h**.
 
 * **TTIM_CB_MODE:** Callback Mode. It termines the mechanism that the module will use to communicate with the application.
-    * **TTIM_CB_MODE_NONE:** No callbacks are used. The user should poll the timer status.
+    * **TTIM_CB_MODE_NONE:** No callbacks are used. The user should poll the timer status via *ttim_is_timedout*.
 
     * **TTIM_CB_MODE_SIMPLE:** The callback is called by passing just the timer id using this function prototype:
         `void <name>( TTIM_HND_T hnd );`
@@ -34,9 +37,9 @@ The configuration is made by including in the project the file **tracker_config.
         `void <name>( TTIM_HND_T hnd, void*param );`
 
 * **TTIM_MM_MODE:** Memory Allocation Mode. It establish the memory allocation scheme for each timer.
-    * **TTIM_MM_MODE_STATIC:** (DEFAULT)  In this mode the number of timers is fixed to TTIM_COUNT, and all the objects are allocated at compile time. All the timers are initialized with ttim_init.  The handlers for each timer are integer numbers starting from 0 to TTIM_COUNT-1.
+    * **TTIM_MM_MODE_STATIC:** (DEFAULT)  In this mode the number of timers is fixed to TTIM_COUNT, and all the objects are allocated at compile time. All the timers are initialized with *ttim_init*.  The handlers for each timer are integer numbers starting from 0 to TTIM_COUNT-1.
 
-   * **TTIM_MM_MODE_DYNAMIC:** In this mode dynamic memory is used for allocating timers at runtime. ttim_init should be called for initialize the module, but won't create any timers. The user should use ttim_ctor for creating a new timer that will return its handler.
+   * **TTIM_MM_MODE_DYNAMIC:** In this mode dynamic memory is used for allocating timers at runtime. *ttim_init* should be called for initialize the module, but won't create any timers. The user should use ttim_ctor for creating a new timer that will return its handler.
 
 * **TTIM_PERIODIC_TICK:** (DEFAULT = 0) It determines the algorithm for incrementing the partial timer counts. The user should call ttim_update() within a timer ISR. If 1, the isr will be fired in a regular basis.
 If 0, the isr will be fired aperdiodically, based on the created timer dynamics.

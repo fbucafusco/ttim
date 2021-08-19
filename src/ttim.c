@@ -2,12 +2,13 @@
 #include "ttim.h"
 
 /**
-   @brief STATES OFEACH TIMER
-	count                   remining_time           state
-	TTIM_INVALID_TIME       TTIM_INVALID_TIME       init
-	!=TTIM_INVALID_TIME     TTIM_INVALID_TIME       stopped
-	!=TTIM_INVALID_TIME     !=TTIM_INVALID_TIME     running
-	TTIM_INVALID_TIME       !=TTIM_INVALID_TIME     paused
+   @brief STATES OF EACH TIMER
+    paused count                   remining_time           state
+    0      TTIM_INVALID_TIME       TTIM_INVALID_TIME       init
+    0      !=TTIM_INVALID_TIME     TTIM_INVALID_TIME       stopped
+    0      !=TTIM_INVALID_TIME     !=TTIM_INVALID_TIME     running
+    1      !=TTIM_INVALID_TIME     !=TTIM_INVALID_TIME     paused
+    1      !=TTIM_INVALID_TIME     TTIM_INVALID_TIME       timedout
  */
 
 /* PRIVATE OBJECTS */
@@ -46,17 +47,17 @@ ttim_t ttim_group[TTIM_COUNT];
 TTIM_STATIC TTIM_HND_T _ttim_get_hnd( void* ptr )
 {
 #if TTIM_MM_MODE==TTIM_MM_MODE_STATIC
-	return TTIM_GET_HND( ptr );
+    return TTIM_GET_HND( ptr );
 #elif TTIM_MM_MODE==TTIM_MM_MODE_DYNAMIC
-	TTIM_ASSERT( ptr!=NULL );
-	return  ( ptr );
+    TTIM_ASSERT( ptr!=NULL );
+    return  ( ptr );
 #endif
 }
 
 #if 0
 TTIM_COUNT_T _ttim_get_timeout( TTIM_HND_T hnd )
 {
-	return ttim_group[hnd].count ;
+    return ttim_group[hnd].count ;
 }
 #endif
 
@@ -69,7 +70,7 @@ TTIM_COUNT_T _ttim_get_timeout( TTIM_HND_T hnd )
  */
 TTIM_STATIC  bool _ttim_time_is_valid( TTIM_COUNT_T time )
 {
-	return time != TTIM_INVALID_TIME;
+    return time != TTIM_INVALID_TIME;
 }
 
 /**
@@ -81,7 +82,7 @@ TTIM_STATIC  bool _ttim_time_is_valid( TTIM_COUNT_T time )
  */
 TTIM_STATIC  bool _ttim_node_is_valid( ttim_t* node )
 {
-	return node != TTIM_INVALID_NEXT;
+    return node != TTIM_INVALID_NEXT;
 }
 
 /**
@@ -93,14 +94,14 @@ TTIM_STATIC  bool _ttim_node_is_valid( ttim_t* node )
  */
 TTIM_STATIC bool _ttim_list_is_empty( ttim_list_t* list )
 {
-	if( _ttim_node_is_valid( list->first )   )
-	{
-		return false;
-	}
-	else
-	{
-		return true;
-	}
+    if( _ttim_node_is_valid( list->first )   )
+    {
+        return false;
+    }
+    else
+    {
+        return true;
+    }
 
 }
 
@@ -111,287 +112,311 @@ TTIM_STATIC bool _ttim_list_is_empty( ttim_list_t* list )
  */
 TTIM_STATIC TTIM_COUNT_T _ttim_timebase_elapsed()
 {
-	/* this is a low level function that relies on the user configuiration */
-	TTIM_COUNT_T rv ;
+    /* this is a low level function that relies on the user configuiration */
+    TTIM_COUNT_T rv ;
 
-	/* this fcn is called always when a timer is running so in every case, the timebase must be running.*/
+    /* this fcn is called always when a timer is running so in every case, the timebase must be running.*/
 
 #ifdef TTIM_TIMEBASE_TYPE
-	TTIM_ASSERT( TTIM_TIMEBASE_IS_RUNNING( &time_base_obj ) );
+    TTIM_ASSERT( TTIM_TIMEBASE_IS_RUNNING( &time_base_obj ) );
 #else
-   TTIM_ASSERT( TTIM_TIMEBASE_IS_RUNNING() );
+    TTIM_ASSERT( TTIM_TIMEBASE_IS_RUNNING() );
 #endif
 
 
 #if TTIM_PERIODIC_TICK==1
-	/* for periodic ticks there is no remaining offline elapsed time, because there is one tick per count. */
-	rv = 0;
+    /* for periodic ticks there is no remaining offline elapsed time, because there is one tick per count. */
+    rv = 0;
 #else
-	rv = TTIM_TIMEBASE_ELAPSED( &time_base_obj );
+    rv = TTIM_TIMEBASE_ELAPSED( &time_base_obj );
 #endif
-	return rv;
+    return rv;
 }
 
 /**
    @brief   Removes a timer from the list.
-			NOT THREAD SAFE
+            NOT THREAD SAFE
    @param   hnd
    @return  TTIM_COUNT_T Remaining time that had left the removed node.
  */
 TTIM_STATIC TTIM_COUNT_T _ttim_list_remove( ttim_list_t* list, TTIM_HND_T hnd )
 {
-	TTIM_COUNT_T rv;
-	ttim_t* node ;
-	ttim_t* node_bck;
+    TTIM_COUNT_T rv;
+    ttim_t* node ;
+    ttim_t* node_bck;
 
-	node        = list->first ;
-	/* upcast */
-	node_bck    = ( ttim_t* ) list;
+    node        = list->first ;
+    /* upcast */
+    node_bck    = ( ttim_t* ) list;
 
-	rv = list->remining_to;
+    rv = list->remining_to;
 
-	while( 1 )
-	{
-		bool not_found = ( TTIM_INVALID_NEXT == node ) ;
-		bool found;
+    while( 1 )
+    {
+        bool not_found = ( TTIM_INVALID_NEXT == node ) ;
+        bool found;
 
-		if(  true == not_found )
-		{
-			/* not found */
-			rv = TTIM_INVALID_TIME;
-			break;
-		}
+        if(  true == not_found )
+        {
+            /* not found */
+            rv = TTIM_INVALID_TIME;
+            break;
+        }
 
 #if TTIM_MM_MODE==TTIM_MM_MODE_STATIC
-		found = ( &ttim_group[hnd] == node ) ;
+        found = ( &ttim_group[hnd] == node ) ;
 #elif TTIM_MM_MODE==TTIM_MM_MODE_DYNAMIC
-		found = ( hnd == node );
+        found = ( hnd == node );
 #endif
 
-		if( true == found )
-		{
-			/* found */
-			node_bck->next          = node->next;
-			node_bck->next_delay   += node->next_delay;
-			node->next              = TTIM_INVALID_NEXT;
-			node->next_delay        = TTIM_INVALID_TIME;
-			break;
-		}
+        if( true == found )
+        {
+            /* found */
+            node_bck->next          = node->next;
+            node_bck->next_delay   += node->next_delay;
+            node->next              = TTIM_INVALID_NEXT;
+            node->next_delay        = TTIM_INVALID_TIME;
+            break;
+        }
 
-		rv         += node->next_delay;
-		node_bck    = node;
-		node        = node->next;
-	}
+        rv         += node->next_delay;
+        node_bck    = node;
+        node        = node->next;
+    }
 
-	return rv;
+    return rv;
 }
 
 /**
    @brief   returns if the timer has paused
-			NOT THREAD SAFE
+            NOT THREAD SAFE
    @param hnd
    @return TTIM_COUNT_T
  */
 TTIM_STATIC bool _ttim_is_paused( TTIM_HND_T hnd )
 {
-	ttim_t* tim;
+    ttim_t* tim;
 
 #if TTIM_MM_MODE==TTIM_MM_MODE_STATIC
-	tim = &ttim_group[hnd];
+    tim = &ttim_group[hnd];
 #elif TTIM_MM_MODE==TTIM_MM_MODE_DYNAMIC
-	tim = hnd;
-	TTIM_ASSERT( hnd!=NULL );
+    tim = hnd;
+    TTIM_ASSERT( hnd!=NULL );
 #endif
 
-	return ( tim->paused == 1 );
+    return ( tim->remining_time != TTIM_INVALID_TIME   &&
+             tim->count         != TTIM_INVALID_TIME   &&
+             tim->paused        == 1   );
 }
 
 /**
    @brief   returns if the timer is stopped
-			NOT THREAD SAFE
+            NOT THREAD SAFE
    @param hnd
    @return TTIM_COUNT_T
  */
 TTIM_STATIC bool _ttim_is_stopped( TTIM_HND_T hnd )
 {
-	ttim_t* tim;
+    ttim_t* tim;
 #if TTIM_MM_MODE==TTIM_MM_MODE_STATIC
-	tim = &ttim_group[hnd];
+    tim = &ttim_group[hnd];
 #elif TTIM_MM_MODE==TTIM_MM_MODE_DYNAMIC
-	tim = hnd;
-	TTIM_ASSERT( hnd!=NULL );
+    tim = hnd;
+    TTIM_ASSERT( hnd!=NULL );
 #endif
 
-	return ( tim->remining_time == TTIM_INVALID_TIME   &&
-			 tim->count         != TTIM_INVALID_TIME   &&
-			 tim->paused        == 0   );
+    return ( tim->remining_time == TTIM_INVALID_TIME   &&
+             tim->count         != TTIM_INVALID_TIME   &&
+             tim->paused        == 0   );
+}
+
+/**
+   @brief Returns if the tier has timedout.
+          NOT THREAD SAFE
+   @param hnd
+   @return bool
+ */
+TTIM_STATIC bool _ttim_is_timedout( TTIM_HND_T hnd )
+{
+    bool rv;
+    ttim_t* tim;
+#if TTIM_MM_MODE==TTIM_MM_MODE_STATIC
+    tim = &ttim_group[hnd];
+#elif TTIM_MM_MODE==TTIM_MM_MODE_DYNAMIC
+    tim = hnd;
+    TTIM_ASSERT( tim!=NULL );
+#endif
+    rv  = ( tim->remining_time  == TTIM_INVALID_TIME );
+    rv  = rv && ( tim->count          != TTIM_INVALID_TIME );
+    rv  = rv &&  ( tim->paused == 1 );
+    return rv;
 }
 
 /**
    @brief returns if the timer is running
-		  NOT THREAD SAFE
+          NOT THREAD SAFE
 
    @param hnd
    @return bool
  */
 TTIM_STATIC bool _ttim_is_running( TTIM_HND_T hnd )
 {
-	bool rv;
-	ttim_t* tim;
+    bool rv;
+    ttim_t* tim;
 
 #if TTIM_MM_MODE==TTIM_MM_MODE_STATIC
-	tim = &ttim_group[hnd];
+    tim = &ttim_group[hnd];
 #elif TTIM_MM_MODE==TTIM_MM_MODE_DYNAMIC
-	tim = hnd;
-	TTIM_ASSERT( tim!=NULL );
+    tim = hnd;
+    TTIM_ASSERT( tim!=NULL );
 #endif
 
-	rv = ( tim->remining_time  != TTIM_INVALID_TIME );
-	rv  = rv && ( tim->count          != TTIM_INVALID_TIME );
-	rv= rv &&  ( tim->paused == 0 );
-	return rv;
-	return ( tim->remining_time  != TTIM_INVALID_TIME   &&
-			 tim->count          != TTIM_INVALID_TIME   &&
-			 tim->paused == 0 );
+    rv  = ( tim->remining_time  != TTIM_INVALID_TIME );
+    rv  = rv && ( tim->count          != TTIM_INVALID_TIME );
+    rv  = rv &&  ( tim->paused == 0 );
+    return rv;
+    return ( tim->remining_time  != TTIM_INVALID_TIME   &&
+             tim->count          != TTIM_INVALID_TIME   &&
+             tim->paused == 0 );
 }
 
 /**
    @brief   calculates the remining time for a given timer, without taking care the elapsed timebase time.
-			NOT THREAD SAFE
+            NOT THREAD SAFE
 
    @param hnd
    @return TTIM_COUNT_T   TTIM_INVALID_TIME if there are not timers started of ti the handler is not stated
-						  other             if the timer related to the hnd has started
+                          other             if the timer related to the hnd has started
  */
 TTIM_STATIC TTIM_COUNT_T _ttim_remaining_time( TTIM_HND_T hnd )
 {
-	TTIM_COUNT_T rv;
-	TTIM_HND_T i;
-	ttim_t* node = ttim_list.first ;
-	ttim_t* tim;
+    TTIM_COUNT_T rv;
+    TTIM_HND_T i;
+    ttim_t* node = ttim_list.first ;
+    ttim_t* tim;
 
 #if TTIM_MM_MODE==TTIM_MM_MODE_STATIC
-	tim = &ttim_group[hnd];
+    tim = &ttim_group[hnd];
 #elif TTIM_MM_MODE==TTIM_MM_MODE_DYNAMIC
-	tim = hnd;
-	TTIM_ASSERT( tim!=NULL );
+    tim = hnd;
+    TTIM_ASSERT( tim!=NULL );
 #endif
 
-	rv = ttim_list.remining_to;
+    rv = ttim_list.remining_to;
 
-	if( rv != TTIM_INVALID_TIME )
-	{
-		while( 1 )
-		{
-			if( TTIM_INVALID_NEXT == node )
-			{
-				/* not found */
-				rv = TTIM_INVALID_TIME;
-				break;
-			}
+    if( rv != TTIM_INVALID_TIME )
+    {
+        while( 1 )
+        {
+            if( TTIM_INVALID_NEXT == node )
+            {
+                /* not found */
+                rv = TTIM_INVALID_TIME;
+                break;
+            }
 
-			if( tim == node )
-			{
-				/* found */
-				break;
-			}
+            if( tim == node )
+            {
+                /* found */
+                break;
+            }
 
-			rv += node->next_delay;
-			node = node->next;
-		}
-	}
-	return rv;
+            rv += node->next_delay;
+            node = node->next;
+        }
+    }
+    return rv;
 }
 
 /**
    @brief returns if there is any timer running
 
    @return bool true:   there is at least one timer running
-				false:  there aren't any timer running
+                false:  there aren't any timer running
  */
 TTIM_STATIC bool _ttim_is_any_running( )
 {
-	int rv;
+    int rv;
 
-	TTIM_CRITICAL_START();
+    TTIM_CRITICAL_START();
 
-	if( ttim_list.first == TTIM_INVALID_NEXT )
-	{
-		rv = false;
-	}
-	else
-	{
-		rv = true;
-	}
+    if( ttim_list.first == TTIM_INVALID_NEXT )
+    {
+        rv = false;
+    }
+    else
+    {
+        rv = true;
+    }
 
-	TTIM_CRITICAL_END();
+    TTIM_CRITICAL_END();
 
-	return rv;
+    return rv;
 }
 
 /**
    @brief   starts the time base with a given timeout.
-			if the timebase is running, the timeout is changed relative to the
-			moment of the call of this method.
+            if the timebase is running, the timeout is changed relative to the
+            moment of the call of this method.
 
    @param time
  */
 TTIM_STATIC void _ttim_timebase_start( TTIM_COUNT_T time )
 {
-	bool start = false;
+    bool start = false;
 
 #if TTIM_PERIODIC_TICK==1
-	/* start the timebase */
-	if( !TTIM_TIMEBASE_IS_RUNNING( &time_base_obj ) )
-	{
-		/* the time base is not running */
-		start = true;
-	}
+    /* start the timebase */
+    if( !TTIM_TIMEBASE_IS_RUNNING( &time_base_obj ) )
+    {
+        /* the time base is not running */
+        start = true;
+    }
 #else
-	/* For TTIM_PERIODIC_TICK==0 the timeout could be different, so it  must be changed */
+    /* For TTIM_PERIODIC_TICK==0 the timeout could be different, so it  must be changed */
 
-	if( ttim_list.remining_to >= time )
-	{
-		/* it only starts the timer, if there is less or equal to de actual timeout.
-		   If not, the current timeout still running because the new timeout is greater than
-		   the 1st delta t, that is related to the first timer in de running list.   */
-		start = true;
-	}
+    if( ttim_list.remining_to >= time )
+    {
+        /* it only starts the timer, if there is less or equal to de actual timeout.
+           If not, the current timeout still running because the new timeout is greater than
+           the 1st delta t, that is related to the first timer in de running list.   */
+        start = true;
+    }
 #endif
 
-	if( start )
-	{
+    if( start )
+    {
 #ifdef TTIM_TIMEBASE_TYPE
-		TTIM_TIMEBASE_START( &time_base_obj, time );
+        TTIM_TIMEBASE_START( &time_base_obj, time );
 #else
-		TTIM_TIMEBASE_START( time );
+        TTIM_TIMEBASE_START( time );
 #endif
-	}
+    }
 
 #if defined(TTIM_TIMEBASE_TYPE) && defined(TTIM_TIMEBASE_IS_RUNNING)
-	TTIM_ASSERT( TTIM_TIMEBASE_IS_RUNNING( &time_base_obj ) );
+    TTIM_ASSERT( TTIM_TIMEBASE_IS_RUNNING( &time_base_obj ) );
 #endif
 }
 
 /**
    @brief   logically stops the timer
-			NOT THREAD SAFE
+            NOT THREAD SAFE
 
    @param hnd
  */
 TTIM_STATIC void _ttim_stop( TTIM_HND_T hnd )
 {
-	ttim_t* tim;
+    ttim_t* tim;
 
 #if TTIM_MM_MODE==TTIM_MM_MODE_DYNAMIC
-	TTIM_ASSERT( tim!=NULL );
-	tim = hnd;
+    TTIM_ASSERT( tim!=NULL );
+    tim = hnd;
 #elif TTIM_MM_MODE==TTIM_MM_MODE_STATIC
-	tim = &ttim_group[hnd];
+    tim = &ttim_group[hnd];
 #endif
 
-	tim->next_delay        = TTIM_INVALID_TIME;
-	tim->paused            = 0;
+    tim->next_delay        = TTIM_INVALID_TIME;
+    tim->paused            = 0;
 }
 
 /**
@@ -402,23 +427,23 @@ TTIM_STATIC void _ttim_stop( TTIM_HND_T hnd )
  */
 TTIM_STATIC bool _ttim_timebase_stop()
 {
-	bool any_timer_running = _ttim_is_any_running();
+    bool any_timer_running = _ttim_is_any_running();
 
-	if( !any_timer_running )
-	{
-		/* turn off he timebase */
+    if( !any_timer_running )
+    {
+        /* turn off he timebase */
 #ifdef TTIM_TIMEBASE_TYPE
-		TTIM_TIMEBASE_STOP( &time_base_obj );
+        TTIM_TIMEBASE_STOP( &time_base_obj );
 #else
-		TTIM_TIMEBASE_STOP();
+        TTIM_TIMEBASE_STOP();
 #endif
-	}
-	else
-	{
-		_ttim_timebase_start( ttim_list.remining_to );
-	}
+    }
+    else
+    {
+        _ttim_timebase_start( ttim_list.remining_to );
+    }
 
-	return any_timer_running;
+    return any_timer_running;
 }
 
 #if TTIM_MM_MODE==TTIM_MM_MODE_DYNAMIC
@@ -430,8 +455,8 @@ TTIM_STATIC bool _ttim_timebase_stop()
 TTIM_HND_T ttim_dtor( TTIM_HND_T hnd )
 {
 #if TTIM_MM_MODE==TTIM_MM_MODE_DYNAMIC
-	TTIM_ASSERT( hnd    !=NULL );
-	TTIM_FREE( hnd );
+    TTIM_ASSERT( hnd    !=NULL );
+    TTIM_FREE( hnd );
 #endif
 }
 #endif
@@ -443,42 +468,42 @@ TTIM_HND_T ttim_dtor( TTIM_HND_T hnd )
  */
 TTIM_HND_T ttim_ctor( TTIM_HND_T hnd )
 {
-	ttim_t* timer_new;
+    ttim_t* timer_new;
 
 #if TTIM_MM_MODE==TTIM_MM_MODE_DYNAMIC
-	hnd =  TTIM_MALLOC( sizeof( ttim_t ) );
-	if( hnd != NULL )
-	{
-		timer_new = hnd;
+    hnd =  TTIM_MALLOC( sizeof( ttim_t ) );
+    if( hnd != NULL )
+    {
+        timer_new = hnd;
 
 #elif TTIM_MM_MODE==TTIM_MM_MODE_STATIC
-	if( hnd < TTIM_COUNT )
-	{
-		timer_new = &ttim_group[hnd];
+    if( hnd < TTIM_COUNT )
+    {
+        timer_new = &ttim_group[hnd];
 #endif
 
-		TTIM_CRITICAL_START();
+        TTIM_CRITICAL_START();
 
-		timer_new->count           = TTIM_INVALID_TIME;
-		timer_new->next_delay      = TTIM_INVALID_TIME;
-		timer_new->remining_time   = TTIM_INVALID_TIME;
-		timer_new->next            = TTIM_INVALID_NEXT;
+        timer_new->count           = TTIM_INVALID_TIME;
+        timer_new->next_delay      = TTIM_INVALID_TIME;
+        timer_new->remining_time   = TTIM_INVALID_TIME;
+        timer_new->next            = TTIM_INVALID_NEXT;
 
 #if TTIM_CB_MODE!=TTIM_CB_MODE_NONE
-		timer_new->timeout_callback = NULL;
+        timer_new->timeout_callback = NULL;
 #endif
 
 #if TTIM_CB_MODE==TTIM_CB_MODE_PARAM
-		timer_new->timeout_param  = NULL;
+        timer_new->timeout_param  = NULL;
 #endif
 
-		TTIM_CRITICAL_END();
-	}
-	else
-	{
-		hnd = TTIM_INVALID_HND;
-	}
-	return hnd;
+        TTIM_CRITICAL_END();
+    }
+    else
+    {
+        hnd = TTIM_INVALID_HND;
+    }
+    return hnd;
 }
 
 /**
@@ -486,26 +511,26 @@ TTIM_HND_T ttim_ctor( TTIM_HND_T hnd )
  */
 void ttim_init()
 {
-	TTIM_HND_T hnd;
+    TTIM_HND_T hnd;
 
-	TTIM_CRITICAL_START();
+    TTIM_CRITICAL_START();
 
 #if TTIM_MM_MODE==TTIM_MM_MODE_STATIC
-	for( hnd = 0 ; hnd < TTIM_COUNT ; hnd++ )
-	{
-		ttim_ctor( hnd ) ;
-	}
+    for( hnd = 0 ; hnd < TTIM_COUNT ; hnd++ )
+    {
+        ttim_ctor( hnd ) ;
+    }
 #endif
 
-	ttim_list.remining_to   = TTIM_INVALID_TIME;
-	ttim_list.first         = TTIM_INVALID_NEXT;
+    ttim_list.remining_to   = TTIM_INVALID_TIME;
+    ttim_list.first         = TTIM_INVALID_NEXT;
 
-	TTIM_CRITICAL_END();
+    TTIM_CRITICAL_END();
 
 #ifdef TTIM_TIMEBASE_TYPE
-	TTIM_TIMEBASE_INIT( &time_base_obj );
+    TTIM_TIMEBASE_INIT( &time_base_obj );
 #else
-	TTIM_TIMEBASE_INIT( time );
+    TTIM_TIMEBASE_INIT( time );
 #endif
 }
 
@@ -516,11 +541,25 @@ void ttim_init()
  */
 bool ttim_is_stopped( TTIM_HND_T hnd )
 {
-	bool rv;
-	TTIM_CRITICAL_START();
-	rv = _ttim_is_stopped(   hnd );
-	TTIM_CRITICAL_END();
-	return rv;
+    bool rv;
+    TTIM_CRITICAL_START();
+    rv = _ttim_is_stopped( hnd );
+    TTIM_CRITICAL_END();
+    return rv;
+}
+
+/**
+   @brief           returns if the timer is timedout
+   @param hnd       Timer handler
+   @return bool     true/false
+ */
+TTIM_STATIC bool ttim_is_timedout( TTIM_HND_T hnd )
+{
+    bool rv;
+    TTIM_CRITICAL_START();
+    rv = _ttim_is_timedout( hnd );
+    TTIM_CRITICAL_END();
+    return rv;
 }
 
 /**
@@ -539,22 +578,22 @@ void ttim_set_n_start( TTIM_HND_T hnd, TTIM_COUNT_T time, void* cb,void*param )
 void ttim_set_n_start( TTIM_HND_T hnd, TTIM_COUNT_T time )
 #endif
 {
-	ttim_stop( hnd );
+    ttim_stop( hnd );
 
 #if TTIM_CB_MODE==TTIM_CB_MODE_SIMPLE
-	ttim_set( hnd, time, cb );
+    ttim_set( hnd, time, cb );
 #elif TTIM_CB_MODE==TTIM_CB_MODE_PARAM
-	ttim_set( hnd, time, cb, param );
+    ttim_set( hnd, time, cb, param );
 #else
-	ttim_set( hnd, time );
+    ttim_set( hnd, time );
 #endif
 
-	ttim_start( hnd );
+    ttim_start( hnd );
 }
 
 /**
    @brief   Sets the timeout value. The timer do not start until ttim_start is called.
-			If it was running, the timer starts with the new timeout value (from zero)
+            If it was running, the timer starts with the new timeout value (from zero)
  */
 #if TTIM_CB_MODE==TTIM_CB_MODE_SIMPLE
 void ttim_set( TTIM_HND_T hnd, TTIM_COUNT_T time, void* cb )
@@ -564,47 +603,52 @@ void ttim_set( TTIM_HND_T hnd, TTIM_COUNT_T time, void* cb,void*param )
 void ttim_set( TTIM_HND_T hnd, TTIM_COUNT_T time )
 #endif
 {
-	ttim_t* timer;
+    ttim_t* timer;
+
+    if( time == TTIM_INVALID_TIME )
+    {
+        return;
+    }
 
 #if TTIM_MM_MODE==TTIM_MM_MODE_DYNAMIC
-	if( hnd != TTIM_INVALID_HND )
-	{
-		timer = hnd;
+    if( hnd != TTIM_INVALID_HND )
+    {
+        timer = hnd;
 #elif TTIM_MM_MODE==TTIM_MM_MODE_STATIC
-	if( hnd < TTIM_COUNT )
-	{
-		timer = &ttim_group[hnd];
+    if( hnd < TTIM_COUNT )
+    {
+        timer = &ttim_group[hnd];
 #endif
 
-		TTIM_CRITICAL_START();
+        TTIM_CRITICAL_START();
 
-		if( _ttim_is_running( hnd ) )
-		{
-			/* Si esta corriendo, frenamos, cambiamos, arrancamos. TODO: esta es la salida facil ! */
+        if( _ttim_is_running( hnd ) )
+        {
+            /* Si esta corriendo, frenamos, cambiamos, arrancamos. TODO: esta es la salida facil ! */
 #if TTIM_CB_MODE==TTIM_CB_MODE_SIMPLE
-			ttim_set_n_start( hnd, time, cb );
+            ttim_set_n_start( hnd, time, cb );
 #elif TTIM_CB_MODE==TTIM_CB_MODE_PARAM
-			ttim_set_n_start( hnd, time, cb, param );
+            ttim_set_n_start( hnd, time, cb, param );
 #else
-			ttim_set_n_start( hnd, time );
+            ttim_set_n_start( hnd, time );
 #endif
-		}
-		else
-		{
-			timer->count = time;
+        }
+        else
+        {
+            timer->count = time;
 
 #if TTIM_CB_MODE==TTIM_CB_MODE_SIMPLE
-			timer->timeout_callback = cb;
+            timer->timeout_callback = cb;
 #elif TTIM_CB_MODE==TTIM_CB_MODE_PARAM
-			timer->timeout_callback = cb;
-			timer->timeout_param = param;
+            timer->timeout_callback = cb;
+            timer->timeout_param = param;
 #else
 #endif
 
-		}
+        }
 
-		TTIM_CRITICAL_END();
-	}
+        TTIM_CRITICAL_END();
+    }
 }
 
 /**
@@ -614,124 +658,127 @@ void ttim_set( TTIM_HND_T hnd, TTIM_COUNT_T time )
  */
 void ttim_start( TTIM_HND_T hnd )
 {
-	ttim_t* timer;
+    ttim_t* timer;
 
 #if TTIM_MM_MODE==TTIM_MM_MODE_DYNAMIC
-	if( hnd != TTIM_INVALID_HND )
-	{
-		timer = hnd;
+    if( hnd != TTIM_INVALID_HND )
+    {
+        timer = hnd;
 #elif TTIM_MM_MODE==TTIM_MM_MODE_STATIC
-	if( hnd < TTIM_COUNT )
-	{
-		timer = &ttim_group[hnd];
+    if( hnd < TTIM_COUNT )
+    {
+        timer = &ttim_group[hnd];
 #endif
-		TTIM_CRITICAL_START();
 
-		if( _ttim_is_running( hnd ) )
-		{
-			/* already running : exit */
-			TTIM_CRITICAL_END();
-			return;
-		}
+        //printf(" on start timer %u to %u rem %u  \n",  hnd, timer->count , timer->remining_time   );
 
-		/* the timer was not setted, exit */
-		if( timer->count == TTIM_INVALID_TIME )
-		{
-			TTIM_CRITICAL_END();
-			return;
-		}
+        TTIM_CRITICAL_START();
 
-		/* up cast the list to ttim_t structure */
-		ttim_t* node  = ( ttim_t* ) &ttim_list;
+        if( _ttim_is_running( hnd ) )
+        {
+            /* already running : exit */
+            TTIM_CRITICAL_END();
+            return;
+        }
 
-		TTIM_COUNT_T count_to ;
+        /* the timer was not setted, exit */
+        if( timer->count == TTIM_INVALID_TIME )
+        {
+            TTIM_CRITICAL_END();
+            return;
+        }
 
-		/* if the timer was paused or not */
-		if( !_ttim_is_paused( hnd ) )
-		{
-			/* it was not paused */
-			count_to = timer->count;
-		}
-		else
-		{
-			/* it was paused */
-			count_to = timer->remining_time;
-		}
+        /* up cast the list to ttim_t structure */
+        ttim_t* node  = ( ttim_t* ) &ttim_list;
 
-		/* Evaluate if the running list is empty. If so, the ner timer is the first node */
-		if( _ttim_list_is_empty( &ttim_list ) )
-		{
-			timer->next                 = TTIM_INVALID_NEXT;
-			timer->remining_time        = count_to ;
+        TTIM_COUNT_T count_to ;
 
-			ttim_list.first             = timer ;    //node->next =   = timer_new ;
+        /* if the timer was paused or not */
+        if( !_ttim_is_paused( hnd ) )
+        {
+            /* it was not paused */
+            count_to = timer->count;
+        }
+        else
+        {
+            /* it was paused */
+            count_to = timer->remining_time;
+        }
 
-			timer->next_delay           = TTIM_INVALID_TIME;
-			ttim_list.remining_to       = count_to; // node->next_delay            = count_to;
-		}
-		else
-		{
-			TTIM_COUNT_T temp = 0 ; //node->next_delay; //campo ttim_list.remining_to
+        /* Evaluate if the running list is empty. If so, the ner timer is the first node */
+        if( _ttim_list_is_empty( &ttim_list ) )
+        {
+            timer->next                 = TTIM_INVALID_NEXT;
+            timer->remining_time        = count_to ;
 
-			// Insert
-			while( 1 )
-			{
-				if( node->next == TTIM_INVALID_NEXT )
-				{
-					/* reach the last node in the list, insert at the end  */
-					break;
-				}
+            ttim_list.first             = timer ;    //node->next =   = timer_new ;
 
-				temp   += node->next_delay ;
+            timer->next_delay           = TTIM_INVALID_TIME;
+            ttim_list.remining_to       = count_to; // node->next_delay            = count_to;
+        }
+        else
+        {
+            TTIM_COUNT_T temp = 0 ; //node->next_delay; //campo ttim_list.remining_to
 
-				if( temp - _ttim_timebase_elapsed() >= count_to   )
-				{
-					/* insert the new timer between node and node->next */
-					break;
-				}
+            // Insert
+            while( 1 )
+            {
+                if( node->next == TTIM_INVALID_NEXT )
+                {
+                    /* reach the last node in the list, insert at the end  */
+                    break;
+                }
 
-				node = node->next;
-			}
+                temp += node->next_delay ;
+
+                if( temp - _ttim_timebase_elapsed() >= count_to   )
+                {
+                    /* insert the new timer between node and node->next */
+                    break;
+                }
+
+                node = node->next;
+            }
 
 
-			if( node->next == TTIM_INVALID_NEXT )
-			{
-				/* reach the last node in the list, insert at the end  */
-				timer->next             = TTIM_INVALID_NEXT;
+            if( node->next == TTIM_INVALID_NEXT )
+            {
+                /* reach the last node in the list, insert at the end  */
+                timer->next             = TTIM_INVALID_NEXT;
 
-				node->next              = timer ;
+                node->next              = timer ;
 
-				timer->next_delay       = TTIM_INVALID_TIME;
-				node->next_delay        = count_to - ( temp - _ttim_timebase_elapsed() )  ;
-			}
-			else
-			{
-				timer->next             = node->next;
-				node->next              = timer ;
+                timer->next_delay       = TTIM_INVALID_TIME;
+                node->next_delay        = count_to - ( temp - _ttim_timebase_elapsed() )  ;
+            }
+            else
+            {
+                timer->next             = node->next;
+                node->next              = timer ;
 
-				timer->next_delay       = temp - count_to - _ttim_timebase_elapsed();
+                timer->next_delay       = temp - count_to - _ttim_timebase_elapsed();
 
-				if( node == ( ttim_t* )  &ttim_list )
-				{
-					node->next_delay            = count_to;    //there were nodes but the new one wil be de first
-				}
-				else
-				{
-					node->next_delay           -= timer->next_delay;//caso A
-				}
-			}
+                if( node == ( ttim_t* )  &ttim_list )
+                {
+                    node->next_delay            = count_to;    //there were nodes but the new one wil be de first
+                }
+                else
+                {
+                    node->next_delay           -= timer->next_delay;//caso A
+                }
+            }
 
-			timer->remining_time    = count_to ;
-		}
+            timer->remining_time    = count_to ;
+        }
 
-		timer->paused = 0;
+        timer->paused = 0;
 
-		TTIM_CRITICAL_END();
+        TTIM_CRITICAL_END();
 
-		/* starts the time base, conditionally.
-		   This action is a system process that should not be within a critical section. */
-		_ttim_timebase_start(   ttim_list.remining_to );
-	}
+        /* starts the time base, conditionally.
+           This action is a system process that should not be within a critical section. */
+        _ttim_timebase_start(   ttim_list.remining_to );
+    }
 }
 
 
@@ -742,31 +789,32 @@ void ttim_start( TTIM_HND_T hnd )
  */
 void ttim_stop( TTIM_HND_T hnd )
 {
-	ttim_t* timer;
+    ttim_t* timer;
 
 #if TTIM_MM_MODE==TTIM_MM_MODE_DYNAMIC
-	if( hnd != TTIM_INVALID_HND )
-	{
-		timer = hnd;
+    if( hnd != TTIM_INVALID_HND )
+    {
+        timer = hnd;
 #elif TTIM_MM_MODE==TTIM_MM_MODE_STATIC
-	if( hnd < TTIM_COUNT )
-	{
-		timer = &ttim_group[hnd];
+    if( hnd < TTIM_COUNT )
+    {
+        timer = &ttim_group[hnd];
 #endif
 
-		TTIM_CRITICAL_START();
+        TTIM_CRITICAL_START();
 
-		/* remove the timer from te timer list */
-		_ttim_list_remove( &ttim_list, hnd );
-		timer->remining_time = TTIM_INVALID_TIME;
-		timer->paused        = 0;
-		//  _ttim_stop(hnd);
+        /* remove the timer from te timer list */
+        _ttim_list_remove( &ttim_list, hnd );
 
-		TTIM_CRITICAL_END();
+        timer->remining_time = TTIM_INVALID_TIME;
+        timer->paused        = 0;
+        //_ttim_stop(hnd);
 
-		/* Any system process should be done outside a critical section.  */
-		_ttim_timebase_stop();
-	}
+        TTIM_CRITICAL_END();
+
+        /* Any system process should be done outside a critical section.  */
+        _ttim_timebase_stop();
+    }
 }
 
 /**
@@ -775,40 +823,47 @@ void ttim_stop( TTIM_HND_T hnd )
  */
 void ttim_pause( TTIM_HND_T hnd )
 {
-	ttim_t* timer;
+    ttim_t* timer;
 
 #if TTIM_MM_MODE==TTIM_MM_MODE_DYNAMIC
-	if( hnd != TTIM_INVALID_HND )
-	{
-		timer = hnd;
+    if( hnd != TTIM_INVALID_HND )
+    {
+        timer = hnd;
 #elif TTIM_MM_MODE==TTIM_MM_MODE_STATIC
-	if( hnd < TTIM_COUNT )
-	{
-		timer = &ttim_group[hnd];
+    if( hnd < TTIM_COUNT )
+    {
+        timer = &ttim_group[hnd];
 #endif
 
-		TTIM_COUNT_T res;
+        TTIM_COUNT_T res;
 
-		TTIM_CRITICAL_START();
+        TTIM_CRITICAL_START();
 
-		/* removes the node */
-		res = _ttim_list_remove( &ttim_list, hnd );
+        /* removes the node */
+        res = _ttim_list_remove( &ttim_list, hnd );
 
-		if( res != TTIM_INVALID_TIME )
-		{
-			/* the node existed but was removed, so, update the remining_to information */
-			timer->remining_time     = res - _ttim_timebase_elapsed() ;
-			timer->next_delay        = TTIM_INVALID_TIME;
-		}
+        if( res != TTIM_INVALID_TIME )
+        {
+            /* the node existed but was removed, so, update the remining_to information */
+            timer->remining_time     = res - _ttim_timebase_elapsed() ;
+            //printf(" on pause timer %u to %u rem %u\n",  hnd, res, timer->remining_time);
+            //this line is removed because is done within _ttim_list_remove
+            //  timer->next_delay        = TTIM_INVALID_TIME;
+        }
 
-		timer->paused = 1;
+        timer->paused = 1;
 
-		TTIM_CRITICAL_END();
+        TTIM_CRITICAL_END();
 
-		/* Any system process should be done outside a critical section.  */
+        /* Any system process should be done outside a critical section.  */
 
-		_ttim_timebase_stop();
-	}
+        _ttim_timebase_stop();
+
+        /*
+            return ( tim->remining_time != TTIM_INVALID_TIME   &&
+                     tim->count         == TTIM_INVALID_TIME   &&
+                     tim->paused        == 1   ); */
+    }
 }
 
 /**
@@ -818,20 +873,20 @@ void ttim_pause( TTIM_HND_T hnd )
 void ttim_reset_n_restart( TTIM_HND_T hnd )
 {
 #if TTIM_MM_MODE==TTIM_MM_MODE_DYNAMIC
-	if( hnd != TTIM_INVALID_HND )
-	{
+    if( hnd != TTIM_INVALID_HND )
+    {
 #elif TTIM_MM_MODE==TTIM_MM_MODE_STATIC
-	if( hnd < TTIM_COUNT )
-	{
-		hnd = hnd;
+    if( hnd < TTIM_COUNT )
+    {
+        hnd = hnd;
 #endif
-		/* improve.
-		   This implementation involvesd 2 whiles,
-		   so the time copexity is O(2 N).
-		   I think that could be done in O(N) */
-		ttim_stop( hnd );
-		ttim_start( hnd );
-	}
+        /* improve.
+           This implementation involvesd 2 whiles,
+           so the time copexity is O(2 N).
+           I think that could be done in O(N) */
+        ttim_stop( hnd );
+        ttim_start( hnd );
+    }
 }
 
 /**
@@ -842,119 +897,120 @@ void ttim_reset_n_restart( TTIM_HND_T hnd )
  */
 TTIM_COUNT_T ttim_get_remining_time( TTIM_HND_T hnd )
 {
-	TTIM_CRITICAL_START();
+    TTIM_CRITICAL_START();
 
-	TTIM_COUNT_T rv = _ttim_remaining_time( hnd );
+    TTIM_COUNT_T rv = _ttim_remaining_time( hnd );
 
-	if( TTIM_INVALID_TIME != rv )
-	{
-		rv = rv - _ttim_timebase_elapsed();
-	}
+    if( TTIM_INVALID_TIME != rv )
+    {
+        rv = rv - _ttim_timebase_elapsed();
+    }
 
-	TTIM_CRITICAL_END();
-	return rv;
+    TTIM_CRITICAL_END();
+    return rv;
 }
 
 /**
    @brief Function that have to be called within the timebase isr handler.
-			For TTIM_PERIODIC_TICK==1 should be called in the periodic tick handler, and will
-			increment the parial count in 1.
-			For TTIM_PERIODIC_TICK==0 should be called from the one shot timer handler, and will
-			timeout the sooner active timer that is in the running list.
+            For TTIM_PERIODIC_TICK==1 should be called in the periodic tick handler, and will
+            increment the parial count in 1.
+            For TTIM_PERIODIC_TICK==0 should be called from the one shot timer handler, and will
+            timeout the sooner active timer that is in the running list.
  */
 void ttim_update()
 {
-	TTIM_CRITICAL_START();
+    TTIM_CRITICAL_START();
 
 #if( TTIM_PERIODIC_TICK==1 )
-	/* is there any timer running? */
-	if( TTIM_INVALID_NEXT == ttim_list.first )
-	{
-		TTIM_CRITICAL_END();
-		return;
-	}
+    /* is there any timer running? */
+    if( TTIM_INVALID_NEXT == ttim_list.first )
+    {
+        TTIM_CRITICAL_END();
+        return;
+    }
 #else
-	/* in this mode the running list should be at least with one element. */
-	TTIM_ASSERT( TTIM_INVALID_NEXT != ttim_list.first );
+    /* in this mode the running list should be at least with one element. */
+    TTIM_ASSERT( TTIM_INVALID_NEXT != ttim_list.first );
 #endif
 
-	/* up cast the first to a node structure */
-	ttim_t* node = ttim_list.first;
+    /* up cast the first to a node structure */
+    ttim_t* node = ttim_list.first;
 
 #if TTIM_PERIODIC_TICK==1
-	ttim_list.remining_to -= 1; /* decrease 1 time unit   */
+    ttim_list.remining_to -= 1; /* decrease 1 time unit   */
 #else
-	ttim_list.remining_to = 0;
+    ttim_list.remining_to = 0;
 #endif
 
-	while( ( 0 == ttim_list.remining_to )  && ( TTIM_INVALID_NEXT != ttim_list.first ) )
-	{
-		node = ttim_list.first;
+    while( ( 0 == ttim_list.remining_to )  && ( TTIM_INVALID_NEXT != ttim_list.first ) )
+    {
+        node = ttim_list.first;
 
-		/* some timer did timedout  */
-		TTIM_HND_T hnd   = _ttim_get_hnd( ttim_list.first );
+        /* some timer did timedout  */
+        TTIM_HND_T hnd   = _ttim_get_hnd( ttim_list.first );
 
-		/* execute the callback */
-		callback_t* timeout_callback = ( callback_t* ) node->timeout_callback;
+        /* execute the callback */
+        callback_t* timeout_callback = ( callback_t* ) node->timeout_callback;
 
-		if( NULL != timeout_callback )
-		{
+        if( NULL != timeout_callback )
+        {
 #if TTIM_CB_MODE==TTIM_CB_MODE_SIMPLE
-			timeout_callback( hnd );
+            timeout_callback( hnd );
 #endif
 
 #if TTIM_CB_MODE==TTIM_CB_MODE_PARAM
-			timeout_callback( hnd, node->timeout_param );
+            timeout_callback( hnd, node->timeout_param );
 #endif
-		}
+        }
 
-		ttim_t* tim;
+        ttim_t* tim;
 
 #if TTIM_MM_MODE==TTIM_MM_MODE_STATIC
-		tim = &ttim_group[hnd];
+        tim = &ttim_group[hnd];
 #elif TTIM_MM_MODE==TTIM_MM_MODE_DYNAMIC
-		tim = hnd;
-		TTIM_ASSERT( tim!=NULL );
+        tim = hnd;
+        TTIM_ASSERT( tim!=NULL );
 #endif
 
-		TTIM_ASSERT( tim==node );
+        TTIM_ASSERT( tim==node );
 
-		/* update the node jumping the current one, that is invalid */
-		ttim_list.first         = node->next;
-		ttim_list.remining_to   = node->next_delay;
+        /* update the node jumping the current one, that is invalid */
+        ttim_list.first         = node->next;
+        ttim_list.remining_to   = node->next_delay;
 
-		/* the timer turns off.   */
+        /* the timer turns off. Set to timedout state  */
 
-		tim->next               = TTIM_INVALID_NEXT;
-		tim->next_delay         = TTIM_INVALID_TIME;
-		tim->paused             = 0;
-		tim->remining_time     = TTIM_INVALID_TIME;
+        tim->next               = TTIM_INVALID_NEXT;
+        tim->next_delay         = TTIM_INVALID_TIME;
 
-		TTIM_ASSERT( ! _ttim_is_running( hnd ) );
-	}
+        tim->paused             = 1;
+        tim->remining_time      = TTIM_INVALID_TIME;
+
+        TTIM_ASSERT( ! _ttim_is_running( hnd ) );
+    }
 
 #if defined(TTIM_TIMEBASE_TYPE) && defined(TTIM_TIMEBASE_IS_RUNNING)
-	TTIM_ASSERT( TTIM_TIMEBASE_IS_RUNNING( &time_base_obj ) );
+    TTIM_ASSERT( TTIM_TIMEBASE_IS_RUNNING( &time_base_obj ) );
 #endif
 
-	TTIM_CRITICAL_END();
+    TTIM_CRITICAL_END();
 
-	/* Any system process should be done outside a critical section.  */
+    /* Any system process should be done outside a critical section.  */
 
-	/* stops the timebase */
-	bool any_timer_running  = _ttim_timebase_stop();
+    /* stops the timebase */
+    bool any_timer_running  = _ttim_timebase_stop();
 
-	if( !any_timer_running )
-	{
-	}
-	else
-	{
+    if( !any_timer_running )
+    {
+    }
+    else
+    {
 #if TTIM_PERIODIC_TICK==1
-		_ttim_timebase_start( TTIM_RESOLUTION );
+        _ttim_timebase_start( TTIM_RESOLUTION );
 #else
-		_ttim_timebase_start( ttim_list.remining_to );
+        _ttim_timebase_start( ttim_list.remining_to );
 #endif
-	}
+    }
 }
 
 /* VALIDATIONS ******************************************************************* */

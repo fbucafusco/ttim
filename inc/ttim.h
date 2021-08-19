@@ -135,6 +135,7 @@ void ttim_update( void );
 
 TTIM_COUNT_T ttim_get_remining_time( TTIM_HND_T hnd );
 bool ttim_is_stopped( TTIM_HND_T hnd );
+bool ttim_is_timedout( TTIM_HND_T hnd );
 
 #if TTIM_MM_MODE==TTIM_MM_MODE_DYNAMIC
 TTIM_HND_T ttim_ctor( TTIM_HND_T hnd );
