@@ -12,7 +12,7 @@ As an option (TTIM_PERIODIC_TICK==1), user choose to use regular periodic tick b
 
 # Documentation: [here](doc/doc.md)
 
-# Examples:
+# Examples: **COMMING SOON**
 
 | HW Platform | SW Platform | Description | URL |
 | :-: | :-: | :-: | :-: |
