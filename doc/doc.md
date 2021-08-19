@@ -6,6 +6,11 @@ For running timers, the library it implements a list were the first element is t
 
 The each timer timeout event, the user can choose which interface to have with the application. If the user choose to use a polled arquitecture, it should use *ttim_is_timedout* function within the main superloop. If it chose using callbacks, the user should provide those callback funtions to *ttim_set* or *ttim_set_n_start* functions. Callbacks are called in ISR context.
 
+## **State machine**
+Each timer has the following state machine. <br>
+
+<img src="./image/ttim_sm.svg">
+
 ## **API**
 
 - **ttim_init**: Module initialization function.
