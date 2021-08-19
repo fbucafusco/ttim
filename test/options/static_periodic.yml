@@ -1,0 +1,7 @@
+
+
+:defines:
+    :test:
+        - TEST_STATIC
+        - TTIM_PERIODIC_TICK=1
+        - TTIM_RESOLUTION=1
