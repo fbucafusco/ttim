@@ -1,0 +1,41 @@
+
+image: ubuntu:latest
+
+before_script:
+  - apt-get -yq update
+  - apt-get -yq update
+  - apt-get -yq install python3.6 python3.7  python3-pip
+  - apt-get -yq install ruby-full
+  - pip install gcovr
+  - gem install ceedling
+  - ceedling version
+  - gcov --version
+  - gcovr --version
+
+test_static:
+   stage: test
+   script:
+      - cd test
+      - ceedling clean
+      - ceedling options:static gcov:all utils:gcov
+   artifacts:
+    paths:
+      - test/build/*
+test_static_periodic:
+   stage: test
+   script:
+      - cd test
+      - ceedling clean
+      - ceedling options:static_periodic gcov:all utils:gcov
+   artifacts:
+    paths:
+      - test/build/*
+test_dynamic:
+   stage: test
+   script:
+      - cd test
+      - ceedling clean
+      - ceedling options:dynamic gcov:all utils:gcov
+   artifacts:
+    paths:
+      - test/build/*
