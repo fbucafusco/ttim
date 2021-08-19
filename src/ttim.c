@@ -481,13 +481,13 @@ TTIM_HND_T ttim_ctor( TTIM_HND_T hnd )
     {
         timer_new = &ttim_group[hnd];
 #endif
-
         TTIM_CRITICAL_START();
 
-        timer_new->count           = TTIM_INVALID_TIME;
-        timer_new->next_delay      = TTIM_INVALID_TIME;
-        timer_new->remining_time   = TTIM_INVALID_TIME;
-        timer_new->next            = TTIM_INVALID_NEXT;
+        timer_new->count            = TTIM_INVALID_TIME;
+        timer_new->next_delay       = TTIM_INVALID_TIME;
+        timer_new->remining_time    = TTIM_INVALID_TIME;
+        timer_new->next             = TTIM_INVALID_NEXT;
+        timer_new->paused           = 0;
 
 #if TTIM_CB_MODE!=TTIM_CB_MODE_NONE
         timer_new->timeout_callback = NULL;

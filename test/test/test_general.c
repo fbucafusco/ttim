@@ -328,7 +328,7 @@ void test_TTIM_1()
     ttim_start( hnd_group[0] );
 
     TEST_ASSERT_FALSE( ttim_is_stopped( hnd_group[0] ) );
-    TEST_ASSERT_TRUE( ttim_is_timedout( hnd_group[1] ) );
+    TEST_ASSERT_TRUE( ttim_is_stopped( hnd_group[1] ) );
 
     TEST_ASSERT_EQUAL( 0, isr_dis );;
 
