@@ -133,10 +133,10 @@ void tim_callback( TTIM_HND_T hnd, void*param )
 
 void print_tim_list()
 {
-    ttim_t* node  = ( ttim_t* ) &ttim_list;
-    TTIM_COUNT_T temp = node->next_delay;
+    ttim_node_t* node  = ( ttim_t* ) &ttim_list;
+    TTIM_COUNT_T temp = node->t;
 
-    PRINTF( "[%02u] el: %02u tb: %02u {", print_idx,   timebase_get_elapsed( &time_base_obj ), node->next_delay );
+    PRINTF( "[%02u] el: %02u tb: %02u {", print_idx,   timebase_get_elapsed( &time_base_obj ), node->t );
     print_idx++;
 
     while( 1 )
@@ -150,10 +150,10 @@ void print_tim_list()
 
         TTIM_HND_T hnd  = _ttim_get_hnd( node );
 
-        PRINTF( "%u (to: %2u d: %2d) ", hnd, temp, ( _ttim_time_is_valid( node->next_delay )?node->next_delay:-1 )   );
+        PRINTF( "%u (to: %2u d: %2d) ", hnd, temp, ( _ttim_time_is_valid( node->t )?node->t:-1 )   );
 
 
-        temp   += node->next_delay ;
+        temp   += node->t ;
 
         if( _ttim_node_is_valid( node->next ) )
         {
@@ -247,7 +247,7 @@ void test_TTIM_0()
     TEST_ASSERT_EQUAL( 3, _ttim_remaining_time( hnd_group[3] ) );
 #endif
 
-    /* hnd_group[1] restarts with a different time. The running list updates all its remining_to time values */
+    /* hnd_group[1] restarts with a different time. The running list updates all its t time values */
     ttim_set( hnd_group[1], 2, NULL, NULL );
 
     print_tim_list();   //2
@@ -259,7 +259,7 @@ void test_TTIM_0()
     TEST_ASSERT_EQUAL( 3, _ttim_remaining_time( hnd_group[3] ) );
 #endif
 
-    /* Add 1 tick, the running list keep intact all its remining_to time values */
+    /* Add 1 tick, the running list keep intact all its t time values */
     simulate_ticks( 1 );
 
     print_tim_list();   //3
@@ -277,7 +277,7 @@ void test_TTIM_0()
     TEST_ASSERT_EQUAL( 2,  ttim_get_remining_time( hnd_group[3] ) );
 
     /* Add 1 tick, hnd_group[1] will end and removed from the list.
-       The running list updates all its remining_to time values */
+       The running list updates all its t time values */
     simulate_ticks( 1 );
 #if TTIM_PERIODIC_TICK==0
     TEST_ASSERT_EQUAL( 3, _ttim_remaining_time( hnd_group[0] ) );

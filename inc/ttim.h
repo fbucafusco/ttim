@@ -88,19 +88,19 @@ typedef void callback_t( TTIM_HND_T hnd );
 typedef void callback_t( TTIM_HND_T hnd, void*param );
 #endif
 
-typedef struct ttim_list_t_
+typedef struct ttim_node_t_
 {
-    struct ttim_t_*         first;          // Points to the first active timer
-    TTIM_COUNT_T            remining_to;    // current/remaining timeout value
-} ttim_list_t;
-
+    struct ttim_node_t_*    next;
+    TTIM_COUNT_T            t;
+} ttim_node_t;
 
 typedef struct ttim_t_
 {
-    struct ttim_t_*         next;           // Points to the next active timer
-    TTIM_COUNT_T            next_delay;     // Has the time difference with the next timer
+    /* node that points to next active timer and has the time difference with it.*/
+    ttim_node_t             node;
 
     TTIM_COUNT_T            remining_time;
+
     TTIM_COUNT_T            count:31;
     TTIM_COUNT_T            paused:1;
 
@@ -113,6 +113,8 @@ typedef struct ttim_t_
 
 } ttim_t;
 
+/* node that points to next active timer and has the time difference with it.*/
+typedef ttim_node_t ttim_list_t ;
 
 /* FUNCTION PROTOTYPES *************************************************************** */
 void ttim_init( void );
