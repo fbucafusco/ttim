@@ -41,6 +41,7 @@
 #define TTIM_TIMEBASE_STOP(TIMER_HND)               timebase_stop(TIMER_HND)
 
 #define TTIM_TIMEBASE_ELAPSED(TIMER_HND)            timebase_get_elapsed(TIMER_HND)
+#define TTIM_TIMEBASE_REMAINING(TIMER_HND)          timebase_get_remaining(TIMER_HND)
 
 /* JUST FOR TESTING */
 #define TTIM_TIMEBASE_ADD_ELAPSED(TIMER_HND , TIME) timebase_add_elapsed(TIMER_HND , TIME )

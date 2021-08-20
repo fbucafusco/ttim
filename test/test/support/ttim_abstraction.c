@@ -93,7 +93,8 @@ int32_t timebase_timedout( mcu_timer_t* hnd )
 
 void timebase_stop( mcu_timer_t* hnd  )
 {
-    ( ( ( hnd )->timeout ) = TTIM_TIMEOUT_INVALID  );
+    ( hnd )->timeout   = TTIM_TIMEOUT_INVALID;
+    hnd->elapsed = 0;
     ( hnd )->flags &= ~TIMER_RUNNING_FLAG;
 }
 
@@ -104,6 +105,30 @@ uint32_t timebase_get_elapsed( mcu_timer_t* hnd )
 {
     return hnd->elapsed;
 }
+
+uint32_t timebase_get_current_to( mcu_timer_t* hnd )
+{
+    return hnd->timeout;
+}
+
+uint32_t timebase_get_remaining( mcu_timer_t* hnd )
+{
+    TEST_ASSERT( ( hnd )->timeout >= hnd->elapsed );
+    uint32_t rv = ( hnd )->timeout - hnd->elapsed;
+    if( rv ==0 )
+    {
+        /* just timedout */
+
+    }
+    return rv;
+}
+
+
+void timebase_reset_elapsed( mcu_timer_t* hnd )
+{
+    hnd->elapsed       = 0 ;
+}
+
 void timebase_add_elapsed( mcu_timer_t* hnd, uint32_t time )
 {
     hnd->elapsed        += ( time );

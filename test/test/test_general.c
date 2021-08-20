@@ -106,6 +106,7 @@ void simulate_ticks( TTIM_COUNT_T n )
         {
             //timed out
             ttim_update();
+            //   timebase_reset_elapsed( &time_base_obj);
         }
     }
 #endif
@@ -121,13 +122,23 @@ void tim_callback( TTIM_HND_T hnd, void*param )
     /* TIMER hnd_group ARE POINTERS, AND MUST BE CREATED IN RUNTIME */
 
     for( int i =0; i<4; i++ )
+    {
         if( hnd==hnd_group[i] )
         {
             activations[i]++;
             return;
         }
+    }
 #endif
 
+}
+
+/**
+ * this callbacks, restarts the timer
+ */
+void tim_callback_active( TTIM_HND_T hnd, void*param )
+{
+    ttim_start( hnd );
 }
 #endif
 
@@ -279,6 +290,9 @@ void test_TTIM_0()
     /* Add 1 tick, hnd_group[1] will end and removed from the list.
        The running list updates all its t time values */
     simulate_ticks( 1 );
+
+    print_tim_list(); //4
+
 #if TTIM_PERIODIC_TICK==0
     TEST_ASSERT_EQUAL( 3, _ttim_remaining_time( hnd_group[0] ) );
     TEST_ASSERT_FALSE( _ttim_time_is_valid ( _ttim_remaining_time( hnd_group[1] ) )     );
@@ -295,10 +309,12 @@ void test_TTIM_0()
     TEST_ASSERT_EQUAL( 23, ttim_get_remining_time( hnd_group[2] ) );
     TEST_ASSERT_EQUAL( 1,  ttim_get_remining_time( hnd_group[3] ) );
 
-    print_tim_list(); //4
+    print_tim_list(); //5
 }
 
-
+/**
+ * test simple callbacks
+ */
 void test_TTIM_1()
 {
     PRINTF( "%s ------------------------------- \n\n", __FUNCTION__ );
@@ -460,9 +476,6 @@ void test_TTIM_2()
 void test_TTIM_4()
 {
     PRINTF( "%s ------------------------------- \n\n", __FUNCTION__ );
-
-
-
 
     ttim_set( hnd_group[0], 10, NULL, NULL );
     ttim_set( hnd_group[1], 5, NULL, NULL );
@@ -1048,8 +1061,6 @@ void test_TTIM_11()
 
 }
 
-
-
 /**
    @brief tries ttim_is_timedout and some state machine transition
  */
@@ -1083,20 +1094,99 @@ void test_TTIM_12()
     TEST_ASSERT_FALSE(  ttim_is_timedout( hnd_group[2] )  );
 }
 
-#if 0
+/**
+   @brief tries timeouts where the callback restarts the timer
+ */
+void test_TTIM_13()
+{
+    PRINTF( "%s ------------------------------- \n\n", __FUNCTION__ );
+
+    ttim_set( hnd_group[0], 40, tim_callback_active, NULL );
+    ttim_set( hnd_group[1], 21, tim_callback_active, NULL );
+    ttim_set( hnd_group[2], 13, tim_callback_active, NULL );
+
+    /* starts  */
+    ttim_start( hnd_group[0] );
+    ttim_start( hnd_group[1] );
+    ttim_start( hnd_group[2] );
+
+    /* the hnd_group[2] must timeout, and restart */
+    simulate_ticks( 15 );
+
+    print_tim_list();   //0
+
+    TEST_ASSERT_FALSE( ttim_is_timedout( hnd_group[0] ) );
+    TEST_ASSERT_FALSE( ttim_is_timedout( hnd_group[1] ) );
+    TEST_ASSERT_FALSE( ttim_is_timedout( hnd_group[2] ) );
+
+    TEST_ASSERT_EQUAL( 25, ttim_get_remining_time( hnd_group[0] ) );
+    TEST_ASSERT_EQUAL( 6, ttim_get_remining_time( hnd_group[1] ) );
+    TEST_ASSERT_EQUAL( 11, ttim_get_remining_time( hnd_group[2] ) );
+
+    ttim_start( hnd_group[2] );
+
+    TEST_ASSERT_EQUAL( 25, ttim_get_remining_time( hnd_group[0] ) );
+    TEST_ASSERT_EQUAL( 6, ttim_get_remining_time( hnd_group[1] ) );
+    TEST_ASSERT_EQUAL( 11, ttim_get_remining_time( hnd_group[2] ) );
+
+    TEST_ASSERT_FALSE( ttim_is_timedout( hnd_group[0] ) );
+    TEST_ASSERT_FALSE( ttim_is_timedout( hnd_group[1] ) );
+    TEST_ASSERT_FALSE( ttim_is_timedout( hnd_group[2] )  );
+}
+
+
+/**
+   @brief tries timeouts where the callback restarts the timer
+ */
+void test_TTIM_Stop_After_Elapsed1()
+{
+    PRINTF( "%s ------------------------------- \n\n", __FUNCTION__ );
+
+    ttim_set( hnd_group[0], 10, NULL, NULL );
+    ttim_set( hnd_group[1], 15, NULL, NULL );
+
+    /* starts  */
+    ttim_start( hnd_group[0] );
+    ttim_start( hnd_group[1] );
+
+    /* the hnd_group[2] must timeout, and restart */
+    simulate_ticks( 4 );
+
+    TEST_ASSERT_FALSE( ttim_is_timedout( hnd_group[0] ) );
+    TEST_ASSERT_FALSE( ttim_is_timedout( hnd_group[1] ) );
+
+    ttim_stop( hnd_group[0] );
+
+    TEST_ASSERT_EQUAL( 11, ttim_get_remining_time( hnd_group[1] ) );
+
+    /* remaining time for the timebase to tick is 6 */
+    TEST_ASSERT_EQUAL( 11, timebase_get_remaining( &time_base_obj ) );
+
+    // timebase_get_current_to( mcu_timer_t* hnd )
+
+}
+
+#if 1
 /**
    @brief Main test function
 
    @return int
  */
+__attribute__((weak))
 int main()
 {
     UNITY_BEGIN();
 
+    // RUN_TEST( test_TTIM_Stop_After_Elapsed2  );
+    RUN_TEST( test_TTIM_Stop_After_Elapsed1  );
+
+    RUN_TEST( test_TTIM_0  );
+
+    RUN_TEST( test_TTIM_13 );
     RUN_TEST( test_TTIM_12 );
 
     RUN_TEST( test_TTIM_0a );
-    RUN_TEST( test_TTIM_0  );
+
     RUN_TEST( test_TTIM_1  );
     RUN_TEST( test_TTIM_2  );
     RUN_TEST( test_TTIM_4  );
