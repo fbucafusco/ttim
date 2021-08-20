@@ -4,7 +4,9 @@ This library provides interfaces for create software timers within baremetal pro
 
 For running timers, the library it implements a list were the first element is the timer with the nearest timeo timeout value. That allows to process each tick interrupt with O(1) time complexity, for any number of running timers.
 
-The each timer timeout event, the user can choose which interface to have with the application. If the user choose to use a polled arquitecture, it should use *ttim_is_timedout* function within the main superloop. If it chose using callbacks, the user should provide those callback funtions to *ttim_set* or *ttim_set_n_start* functions. Callbacks are called in ISR context.
+### **Timeout events and callbacks**
+
+For each timer timeout event, the user can choose which interface to have with the application. If the user choose to use a polled arquitecture, it should use *ttim_is_timedout* function within the main superloop. If it chose using callbacks, the user should provide those callback funtions to *ttim_set* or *ttim_set_n_start* functions. Callbacks are called in ISR context. Callbacks can call any method of this library, but *ttim_update* that is reseved for each timer isr.
 
 ## **State machine**
 Each timer has the following state machine. <br>
@@ -59,6 +61,6 @@ If 0, the isr will be fired aperdiodically, based on the created timer dynamics.
     * **TTIM_TIMEBASE_IS_RUNNING(TIMER_HND):** Macro that should return a positive number if the timebase is running or 0 if not.
     * **TTIM_TIMEBASE_IS_STOPPED(TIMER_HND):** Macro that should return a positive number if the timebase is stopped or 1 if not.
 
-* System related configuration:
+* **System related configuration:**
     * **TTIM_CRITICAL_START / TTIM_CRITICAL_END:** Macros to define critical sections within the library.
     * **TTIM_ASSERT(CONDITION):** Provides the library an assertion option. This is mostly used for debugging. In production releases, the false condition should reset the system.

@@ -386,8 +386,6 @@ TTIM_STATIC void _ttim_timebase_start( TTIM_COUNT_T time )
     bool start = false;
     bool is_running ;
 
-
-
 #ifdef TTIM_TIMEBASE_TYPE
     is_running = TTIM_TIMEBASE_IS_RUNNING( &time_base_obj );
 #else
@@ -402,32 +400,11 @@ TTIM_STATIC void _ttim_timebase_start( TTIM_COUNT_T time )
 
 #if TTIM_PERIODIC_TICK==1
     /* start the timebase */
-
 #else
     /* For TTIM_PERIODIC_TICK==0 the timeout could be different, so it  must be changed */
 
     else
     {
-        TTIM_COUNT_T remaining;
-
-#ifdef TTIM_TIMEBASE_TYPE
-        remaining = TTIM_TIMEBASE_REMAINING( &time_base_obj );
-#else
-        remaining = TTIM_TIMEBASE_REMAINING();
-#endif
-        if( remaining==0 )
-        {
-            /* just timedout : means that the timebase should be reconfigured to start with the given new timeout */
-            start = true;
-        }
-
-        else if( remaining > time )
-        {
-            /* it only starts the timer, if there is less or equal to de actual timeout.
-               If not, the current timeout still running because the new timeout is greater than
-               the 1st delta t, that is related to the next timer in de running list.   */
-            start = true;
-        }
         start = true;
     }
 #endif
@@ -470,7 +447,12 @@ TTIM_STATIC bool _ttim_timebase_stop()
     else
     {
         /* the list still have timers to run, the timebase should be reconfigured */
-        _ttim_timebase_start( ttim_list.t ); //elapsed?
+#if TTIM_PERIODIC_TICK==1
+        _ttim_timebase_start( TTIM_RESOLUTION );
+#else
+        /* */
+        _ttim_timebase_start( ttim_list.t );//elapsed?
+#endif
     }
 
     return any_timer_running;
@@ -804,7 +786,12 @@ void ttim_start( TTIM_HND_T hnd )
 
         /* starts the time base, conditionally.
            This action is a system process that should not be within a critical section. */
+#if TTIM_PERIODIC_TICK==1
+        _ttim_timebase_start( TTIM_RESOLUTION );
+#else
+        /* */
         _ttim_timebase_start( ttim_list.t );
+#endif
     }
 }
 
@@ -947,7 +934,9 @@ void ttim_update()
     TTIM_CRITICAL_START();
 
 #if( TTIM_PERIODIC_TICK==1 )
-    /* is there any timer running? */
+    /* is there any timer running? TODO check if this is necessary.
+     * The tick is always running, so maybe it is imortant to handle som race condition en terms
+     * of hardware flags  */
     if( TTIM_INVALID_NEXT == ttim_list.next )
     {
         TTIM_CRITICAL_END();
@@ -1041,7 +1030,7 @@ void ttim_update()
     else
     {
 #if TTIM_PERIODIC_TICK==1
-        _ttim_timebase_start( TTIM_RESOLUTION );
+        // _ttim_timebase_start( TTIM_RESOLUTION );
 #else
         /* */
         _ttim_timebase_start( ttim_list.t );

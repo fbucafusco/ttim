@@ -88,8 +88,8 @@ void simulate_ticks( TTIM_COUNT_T n )
     for( i=0; i<n; i++ )
     {
         TEST_ASSERT_EQUAL( 0, isr_dis );
+        timebase_add_elapsed( &time_base_obj, 1 );
         ttim_update();
-        TTIM_TIMEBASE_ADD_ELAPSED( &time_base_obj, 1 );
     }
 #else
     for( TTIM_COUNT_T i=0; i<n; i++ )
@@ -106,7 +106,6 @@ void simulate_ticks( TTIM_COUNT_T n )
         {
             //timed out
             ttim_update();
-            //   timebase_reset_elapsed( &time_base_obj);
         }
     }
 #endif
@@ -389,7 +388,15 @@ void test_TTIM_1()
 
     TEST_ASSERT_FALSE( _ttim_is_any_running() );
 
+
+#if TTIM_PERIODIC_TICK==1
+    /* for perioric tick THE TIMEBASE DO NOT STOP.
+     * TODO: implement the same mechanism to stop de timebase when no timers are running. */
+#else
+    /* FOR ONE SHOT TIMER THE TIMEBASE SHOULD BE STOPPED */
     TEST_ASSERT_TRUE( TTIM_TIMEBASE_IS_STOPPED( &time_base_obj ) );
+#endif
+
 
     /* starts   hnd_group[1] */
     ttim_start( hnd_group[1] );
@@ -994,7 +1001,14 @@ void test_TTIM_10()
         /*  30 , ticks all must timeout  */
         simulate_ticks( 30 );
 
+#if TTIM_PERIODIC_TICK==1
+        /* for perioric tick THE TIMEBASE DO NOT STOP.
+         * TODO: implement the same mechanism to stop de timebase when no timers are running. */
+#else
+        /* FOR ONE SHOT TIMER THE TIMEBASE SHOULD BE STOPPED */
         TEST_ASSERT_TRUE( TTIM_TIMEBASE_IS_STOPPED( &time_base_obj ) );      //timebase is turned off
+#endif
+
     }
 
     {
@@ -1159,25 +1173,26 @@ void test_TTIM_Stop_After_Elapsed1()
 
     TEST_ASSERT_EQUAL( 11, ttim_get_remining_time( hnd_group[1] ) );
 
-    /* remaining time for the timebase to tick is 6 */
-    TEST_ASSERT_EQUAL( 11, timebase_get_remaining( &time_base_obj ) );
 
-    // timebase_get_current_to( mcu_timer_t* hnd )
+#if TTIM_PERIODIC_TICK==1
+    /* for perioric tick the remaining time is not compatible. */
+#else
+    /* FOR TEST ONLY: remaining time for the timebase to tick is 6 */
+    TEST_ASSERT_EQUAL( 11, timebase_get_remaining( &time_base_obj ) );
+#endif
 
 }
 
-#if 1
+#if 0
 /**
    @brief Main test function
 
    @return int
  */
-__attribute__((weak))
 int main()
 {
     UNITY_BEGIN();
 
-    // RUN_TEST( test_TTIM_Stop_After_Elapsed2  );
     RUN_TEST( test_TTIM_Stop_After_Elapsed1  );
 
     RUN_TEST( test_TTIM_0  );
