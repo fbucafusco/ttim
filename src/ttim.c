@@ -161,7 +161,6 @@ TTIM_STATIC TTIM_COUNT_T _ttim_list_remove_first( ttim_list_t* list )
     list->t     = node->node.t;
 
     _ttim_node_invalidate( ( ttim_node_t* ) node );
-
 }
 
 /**
@@ -720,10 +719,10 @@ void ttim_start( TTIM_HND_T hnd )
         }
 
         /* up cast the list to ttim_t structure */
-        ttim_t* node  = ( ttim_t* ) &ttim_list;
+        ttim_t* tim  = ( ttim_t* ) &ttim_list;
 
         TTIM_COUNT_T count_to ;
-        uint32_t acum_elapsed;
+        uint32_t acum_elapsed = 0;
 
         /* if the timer was paused or not */
         if( !_ttim_is_paused( hnd ) )
@@ -737,72 +736,59 @@ void ttim_start( TTIM_HND_T hnd )
             count_to = timer->remining_time;
         }
 
-        /* Evaluate if the running list is empty. If so, the timer is the first node */
-        if( _ttim_list_is_empty( &ttim_list ) )
+        TTIM_COUNT_T acum = 0 ;
+
+        // Insert
+        while( 1 )
         {
-            timer->node.next            = TTIM_INVALID_NEXT;
-            timer->node.t               = TTIM_INVALID_TIME;
+            if( tim->node.next == TTIM_INVALID_NEXT )
+            {
+                /* reach the last node in the list, insert at the end  */
+                break;
+            }
 
-            timer->remining_time        = count_to ;
+            acum += tim->node.t ;
 
-            ttim_list.t       = count_to; // node->t            = count_to;
-            ttim_list.next             = timer ;    //node->next =   = timer_new ;
+            acum_elapsed = acum - _ttim_timebase_elapsed();
+
+            if( acum_elapsed  > count_to   )
+            {
+                /* insert the new timer between node and node->next */
+                break;
+            }
+
+            /* jump to the next */
+            tim = tim->node.next;
+        }
+
+        if( tim->node.next == TTIM_INVALID_NEXT )
+        {
+            /* Reach the last node in the list, insert at the end.
+               This case also handles when the list is empty  */
+            _ttim_node_invalidate( ( ttim_node_t* ) timer );
+
+            tim->node.next     = timer ;
+            tim->node.t        = count_to - acum_elapsed  ;
         }
         else
         {
-            TTIM_COUNT_T acum = 0 ; //node->t; //campo ttim_list.t
+            timer->node.next   = tim->node.next;
+            tim->node.next     = timer ;
 
-            // Insert
-            while( 1 )
+            timer->node.t      = acum_elapsed - count_to ;
+
+            if( tim == ( ttim_t* )  &ttim_list )
             {
-                if( node->node.next == TTIM_INVALID_NEXT )
-                {
-                    /* reach the last node in the list, insert at the end  */
-                    break;
-                }
-
-                acum += node->node.t ;
-
-                acum_elapsed = acum - _ttim_timebase_elapsed();
-
-                if( acum_elapsed  > count_to   )
-                {
-                    /* insert the new timer between node and node->next */
-                    break;
-                }
-
-                node = node->node.next;
-            }
-
-            if( node->node.next == TTIM_INVALID_NEXT )
-            {
-                /* reach the last node in the list, insert at the end  */
-                _ttim_node_invalidate( ( ttim_node_t* ) timer );
-
-                node->node.next     = timer ;
-                node->node.t        = count_to - acum_elapsed  ;
+                tim->node.t    = count_to;    //there were nodes but the new one will be de next
             }
             else
             {
-                timer->node.next    = node->node.next;
-                node->node.next     = timer ;
-
-                timer->node.t       = acum_elapsed - count_to ;
-
-                if( node == ( ttim_t* )  &ttim_list )
-                {
-                    node->node.t    = count_to;    //there were nodes but the new one wil be de next
-                }
-                else
-                {
-                    node->node.t   -= timer->node.t;
-                }
+                tim->node.t   -= timer->node.t;
             }
-
-            timer->remining_time = count_to ;
         }
 
-        timer->paused = 0;
+        timer->remining_time = count_to ;
+        timer->paused        = 0;
 
         TTIM_CRITICAL_END();
 
@@ -1007,7 +993,6 @@ void ttim_update()
 #endif
         }
     }
-
 
 #if  defined(TTIM_TIMEBASE_IS_RUNNING) && (TTIM_PERIODIC_TICK==1)
 #ifdef TTIM_TIMEBASE_TYPE
