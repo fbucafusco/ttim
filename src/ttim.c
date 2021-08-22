@@ -440,7 +440,19 @@ TTIM_STATIC void _ttim_timebase_start( TTIM_COUNT_T time )
 #endif
 }
 
-
+/**
+   @brief Stops the timebase
+   @return
+ */
+TTIM_STATIC void _ttim_timebase_stop()
+{
+    /* turn off he timebase */
+#ifdef TTIM_TIMEBASE_TYPE
+    TTIM_TIMEBASE_STOP( &time_base_obj );
+#else
+    TTIM_TIMEBASE_STOP();
+#endif
+}
 
 /**
    @brief Stops the timebase if there is no more timers running.
@@ -449,19 +461,13 @@ TTIM_STATIC void _ttim_timebase_start( TTIM_COUNT_T time )
    @return true    there still are timers that need for the time base, the timebase didn't stop
    @return false   the timebase has stopped
  */
-TTIM_STATIC bool _ttim_timebase_stop()
+TTIM_STATIC bool _ttim_timebase_stop_or_restart()
 {
     bool any_timer_running = _ttim_is_any_running();
 
     if( !any_timer_running )
     {
-        /* turn off he timebase */
-#ifdef TTIM_TIMEBASE_TYPE
-        TTIM_TIMEBASE_STOP( &time_base_obj );
-#else
-        TTIM_TIMEBASE_STOP();
-#endif
-
+        _ttim_timebase_stop();
     }
     else
     {
@@ -836,7 +842,7 @@ void ttim_stop( TTIM_HND_T hnd )
         TTIM_CRITICAL_END();
 
         /* Any system process should be done outside a critical section.  */
-        _ttim_timebase_stop();
+        _ttim_timebase_stop_or_restart();
     }
 }
 
@@ -878,7 +884,7 @@ void ttim_pause( TTIM_HND_T hnd )
 
         /* Any system process should be done outside a critical section.  */
 
-        _ttim_timebase_stop();
+        _ttim_timebase_stop_or_restart();
 
         /*
             return ( tim->remining_time != TTIM_INVALID_TIME   &&
@@ -962,11 +968,7 @@ void ttim_update()
     ttim_list.t = 0;
 
     /* the time base is stopped */
-#ifdef TTIM_TIMEBASE_TYPE
-    TTIM_TIMEBASE_STOP( &time_base_obj );
-#else
-    TTIM_TIMEBASE_STOP();
-#endif
+    _ttim_timebase_stop();
 #endif
 
     /* up cast the next to a node structure */
