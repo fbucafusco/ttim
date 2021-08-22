@@ -12,9 +12,9 @@ As an option (TTIM_PERIODIC_TICK==1), user choose to use regular periodic tick b
 
 # Documentation: [here](doc/doc.md)
 
-# Examples: **COMMING SOON**
+# Examples:
 
 | HW Platform | SW Platform | Description | URL |
 | :-: | :-: | :-: | :-: |
-| EDUCIAA | firmware_v3 + sapi | Baremetal 4 LEDs blinker | link |
-| DISCOVERY | CubeMX HAL | Baremetal 1 LEDs blinker |  link |
+| EDUCIAA | firmware_v3 + sapi | Baremetal 4 LEDs blinker | [link](https://github.com/fbucafusco/ttim_example_educiaa) |
+| DISCOVERY | CubeMX HAL | Baremetal 1 LEDs blinker |  link **COMMING SOON**    |

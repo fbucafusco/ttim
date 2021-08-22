@@ -4,6 +4,11 @@ This library provides interfaces for create software timers within baremetal pro
 
 For running timers, the library it implements a list were the first element is the timer with the nearest timeo timeout value. That allows to process each tick interrupt with O(1) time complexity, for any number of running timers.
 
+### **Timer handlers**
+
+Each timer has a handler that should be use to operate with the API.
+See TTIM_MM_MODE for more info.
+
 ### **Timeout events and callbacks**
 
 For each timer timeout event, the user can choose which interface to have with the application. If the user choose to use a polled arquitecture, it should use *ttim_is_timedout* function within the main superloop. If it chose using callbacks, the user should provide those callback funtions to *ttim_set* or *ttim_set_n_start* functions. Callbacks are called in ISR context. Callbacks can call any method of this library, but *ttim_update* that is reseved for each timer isr.
