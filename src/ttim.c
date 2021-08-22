@@ -36,6 +36,8 @@ ttim_t ttim_group[TTIM_COUNT];
 #define TTIM_STATIC static inline
 #endif
 
+
+
 /* PRIVATE DEFAULT VALUES ======================================================================= */
 
 /**
@@ -52,7 +54,6 @@ TTIM_STATIC bool _ttim_node_invalidate( ttim_node_t* node )
     node->next  = TTIM_INVALID_NEXT;
 }
 
-
 /**
    @brief returns if the node is valid
             NOT THREAD SAFE
@@ -68,7 +69,8 @@ TTIM_STATIC bool _ttim_node_is_valid( ttim_t* node )
 
 /**
    @brief given a timer object pointer, it returns the handler
-
+            NOT THREAD SAFE
+            PRIVATE METHOD
    @param hnd
    @return TTIM_COUNT_T
  */
@@ -82,16 +84,11 @@ TTIM_STATIC TTIM_HND_T _ttim_get_hnd( void* ptr )
 #endif
 }
 
-#if 0
-TTIM_COUNT_T _ttim_get_timeout( TTIM_HND_T hnd )
-{
-    return ttim_group[hnd].count ;
-}
-#endif
 
 /**
    @brief returns if the time value is valid
-
+            NOT THREAD SAFE
+            PRIVATE METHOD
    @param time
    @return true
    @return false
@@ -104,7 +101,8 @@ TTIM_STATIC  bool _ttim_time_is_valid( TTIM_COUNT_T time )
 
 /**
    @brief returns if the list is empty
-
+            NOT THREAD SAFE
+            PRIVATE METHOD
    @param list
    @return true
    @return false
@@ -123,7 +121,8 @@ TTIM_STATIC bool _ttim_list_is_empty( ttim_list_t* list )
 
 /**
    @brief returns the tick count from the last call to _ttim_timebase_start
-
+            NOT THREAD SAFE
+            PRIVATE METHOD
    @return TTIM_COUNT_T
  */
 TTIM_STATIC TTIM_COUNT_T _ttim_timebase_elapsed()
@@ -131,16 +130,9 @@ TTIM_STATIC TTIM_COUNT_T _ttim_timebase_elapsed()
     /* this is a low level function that relies on the user configuiration */
     TTIM_COUNT_T rv ;
 
-    /* this fcn is called always when a timer is running so in every case, the timebase must be running.*/
-
-#ifdef TTIM_TIMEBASE_TYPE
-    //   TTIM_ASSERT( TTIM_TIMEBASE_IS_RUNNING( &time_base_obj ) );
-#else
-    //   TTIM_ASSERT( TTIM_TIMEBASE_IS_RUNNING() );
-#endif
-
 #if TTIM_PERIODIC_TICK==1
-    /* for periodic ticks there is no remaining offline elapsed time, because there is one tick per count. */
+    /* for periodic ticks there is no remaining offline elapsed time, because there is one tick per count.
+       Optimizing the library will simplify this call */
     rv = 0;
 #else
 
@@ -155,8 +147,27 @@ TTIM_STATIC TTIM_COUNT_T _ttim_timebase_elapsed()
 }
 
 /**
+   @brief Removes the first timer in the list.
+            NOT THREAD SAFE
+            PRIVATE METHOD
+   @param list
+   @return TTIM_STATIC
+ */
+TTIM_STATIC TTIM_COUNT_T _ttim_list_remove_first( ttim_list_t* list )
+{
+    ttim_t* node = ( ttim_t* ) list->next ;
+
+    list->next  = node->node.next;
+    list->t     = node->node.t;
+
+    _ttim_node_invalidate( ( ttim_node_t* ) node );
+
+}
+
+/**
    @brief   Removes a timer from the list.
             NOT THREAD SAFE
+            PRIVATE METHOD
    @param   hnd
    @return  TTIM_COUNT_T Remaining time that had left the removed node.
  */
@@ -386,6 +397,12 @@ TTIM_STATIC void _ttim_timebase_start( TTIM_COUNT_T time )
     bool start = false;
     bool is_running ;
 
+#if TTIM_PERIODIC_TICK==1
+    /* for this mode, the value of the tick is fixed */
+    time = TTIM_RESOLUTION ;
+#endif
+
+
 #ifdef TTIM_TIMEBASE_TYPE
     is_running = TTIM_TIMEBASE_IS_RUNNING( &time_base_obj );
 #else
@@ -427,6 +444,7 @@ TTIM_STATIC void _ttim_timebase_start( TTIM_COUNT_T time )
 
 /**
    @brief Stops the timebase if there is no more timers running.
+            IF there are  running timers, it starts the timebase again
 
    @return true    there still are timers that need for the time base, the timebase didn't stop
    @return false   the timebase has stopped
@@ -443,16 +461,12 @@ TTIM_STATIC bool _ttim_timebase_stop()
 #else
         TTIM_TIMEBASE_STOP();
 #endif
+
     }
     else
     {
         /* the list still have timers to run, the timebase should be reconfigured */
-#if TTIM_PERIODIC_TICK==1
-        _ttim_timebase_start( TTIM_RESOLUTION );
-#else
-        /* */
-        _ttim_timebase_start( ttim_list.t );//elapsed?
-#endif
+        _ttim_timebase_start( ttim_list.t );
     }
 
     return any_timer_running;
@@ -483,7 +497,7 @@ TTIM_HND_T ttim_ctor( TTIM_HND_T hnd )
     ttim_t* timer_new;
 
 #if TTIM_MM_MODE==TTIM_MM_MODE_DYNAMIC
-    hnd =  TTIM_MALLOC( sizeof( ttim_t ) );
+    hnd = TTIM_MALLOC( sizeof( ttim_t ) );
     if( hnd != NULL )
     {
         timer_new = hnd;
@@ -655,7 +669,6 @@ void ttim_set( TTIM_HND_T hnd, TTIM_COUNT_T time )
             timer->timeout_param = param;
 #else
 #endif
-
         }
 
         TTIM_CRITICAL_END();
@@ -704,6 +717,7 @@ void ttim_start( TTIM_HND_T hnd )
         ttim_t* node  = ( ttim_t* ) &ttim_list;
 
         TTIM_COUNT_T count_to ;
+        uint32_t acum_elapsed;
 
         /* if the timer was paused or not */
         if( !_ttim_is_paused( hnd ) )
@@ -730,7 +744,7 @@ void ttim_start( TTIM_HND_T hnd )
         }
         else
         {
-            TTIM_COUNT_T temp = 0 ; //node->t; //campo ttim_list.t
+            TTIM_COUNT_T acum = 0 ; //node->t; //campo ttim_list.t
 
             // Insert
             while( 1 )
@@ -741,9 +755,11 @@ void ttim_start( TTIM_HND_T hnd )
                     break;
                 }
 
-                temp += node->node.t ;
+                acum += node->node.t ;
 
-                if( temp - _ttim_timebase_elapsed() >= count_to   )
+                acum_elapsed = acum - _ttim_timebase_elapsed();
+
+                if( acum_elapsed  > count_to   )
                 {
                     /* insert the new timer between node and node->next */
                     break;
@@ -758,14 +774,14 @@ void ttim_start( TTIM_HND_T hnd )
                 _ttim_node_invalidate( ( ttim_node_t* ) timer );
 
                 node->node.next     = timer ;
-                node->node.t        = count_to - ( temp - _ttim_timebase_elapsed() )  ;
+                node->node.t        = count_to - acum_elapsed  ;
             }
             else
             {
                 timer->node.next    = node->node.next;
                 node->node.next     = timer ;
 
-                timer->node.t       = temp - count_to - _ttim_timebase_elapsed();
+                timer->node.t       = acum_elapsed - count_to ;
 
                 if( node == ( ttim_t* )  &ttim_list )
                 {
@@ -784,14 +800,9 @@ void ttim_start( TTIM_HND_T hnd )
 
         TTIM_CRITICAL_END();
 
-        /* starts the time base, conditionally.
+        /* Starts the time base, conditionally.
            This action is a system process that should not be within a critical section. */
-#if TTIM_PERIODIC_TICK==1
-        _ttim_timebase_start( TTIM_RESOLUTION );
-#else
-        /* */
         _ttim_timebase_start( ttim_list.t );
-#endif
     }
 }
 
@@ -859,8 +870,6 @@ void ttim_pause( TTIM_HND_T hnd )
             /* the node existed but was removed, so, update the t information */
             timer->remining_time     = res - _ttim_timebase_elapsed() ;
             //printf(" on pause timer %u to %u rem %u\n",  hnd, res, timer->remining_time);
-            //this line is removed because is done within _ttim_list_remove
-            //  timer->t        = TTIM_INVALID_TIME;
         }
 
         timer->paused = 1;
@@ -947,13 +956,12 @@ void ttim_update()
     TTIM_ASSERT( TTIM_INVALID_NEXT != ttim_list.next );
 #endif
 
-    /* up cast the next to a node structure */
-    ttim_t* node = ttim_list.next;
-
 #if TTIM_PERIODIC_TICK==1
     ttim_list.t -= 1; /* decrease 1 time unit   */
 #else
     ttim_list.t = 0;
+
+    /* the time base is stopped */
 #ifdef TTIM_TIMEBASE_TYPE
     TTIM_TIMEBASE_STOP( &time_base_obj );
 #else
@@ -961,42 +969,31 @@ void ttim_update()
 #endif
 #endif
 
-    while( ( 0 == ttim_list.t )  && ( TTIM_INVALID_NEXT != ttim_list.next ) )
+    /* up cast the next to a node structure */
+    TTIM_HND_T hnd ;
+    ttim_t* tim;
+
+    /* remove all the timers that had timeout and execute their callbacks */
+    while( 0 == ttim_list.t )
     {
-        node = ttim_list.next;
+        /* upcast the first node on the list */
+        tim = ( ttim_t* ) ttim_list.next;
 
-        /* some timer did timedout  */
-        TTIM_HND_T hnd   = _ttim_get_hnd( ttim_list.next );
+        /* get the handler for that node */
+        hnd = _ttim_get_hnd( tim );
 
+        /* get the callback */
+        callback_t* which_callback  = ( callback_t* ) tim->timeout_callback;
+        void* which_param           = tim->timeout_param;
 
-        ttim_t* tim;
+        /* removes the first node on de list */
+        _ttim_list_remove_first(  &ttim_list );
 
-#if TTIM_MM_MODE==TTIM_MM_MODE_STATIC
-        tim = &ttim_group[hnd];
-#elif TTIM_MM_MODE==TTIM_MM_MODE_DYNAMIC
-        tim = hnd;
-        TTIM_ASSERT( tim!=NULL );
-#endif
-
-        TTIM_ASSERT( tim==node );
-
-        /* update the node jumping the current one, that is invalid */
-        ttim_list.next  = node->node.next;
-        ttim_list.t     = node->node.t;
-
-        /* the timer turns off. Set to timedout state  */
-        _ttim_node_invalidate( ( ttim_node_t* ) tim );
-
+        /* Set the removed node to timedout state  */
         tim->paused         = 1;
         tim->remining_time  = TTIM_INVALID_TIME;
 
-        TTIM_ASSERT( ! _ttim_is_running( hnd ) );
-
-        /* once removed, execute the allback */
         /* execute the callback */
-        callback_t* which_callback = ( callback_t* ) node->timeout_callback;
-        void* which_param = node->timeout_param;
-
         if( NULL != which_callback )
         {
 #if TTIM_CB_MODE==TTIM_CB_MODE_SIMPLE
@@ -1008,6 +1005,7 @@ void ttim_update()
 #endif
         }
     }
+
 
 #if  defined(TTIM_TIMEBASE_IS_RUNNING) && (TTIM_PERIODIC_TICK==1)
 #ifdef TTIM_TIMEBASE_TYPE
@@ -1029,12 +1027,7 @@ void ttim_update()
     }
     else
     {
-#if TTIM_PERIODIC_TICK==1
-        // _ttim_timebase_start( TTIM_RESOLUTION );
-#else
-        /* */
         _ttim_timebase_start( ttim_list.t );
-#endif
     }
 }
 
@@ -1047,11 +1040,14 @@ void ttim_update()
 #error For TTIM_MM_MODE_STATIC ttim_config.h must define TTIM_COUNT
 #endif
 
-#if TTIM_PERIODIC_TICK==1 && ( !defined(TTIM_RESOLUTION)   )
+#if TTIM_PERIODIC_TICK==1
+#ifndef TTIM_TIMEBASE_ELAPSED
+#error TTIM_TIMEBASE_ELAPSED in ttim_config.h is not needed
+#endif
+#ifndef TTIM_RESOLUTION
 #error For TTIM_PERIODIC_TICK==1 ttim_config.h must define TTIM_RESOLUTION that will be used to start the timer via TTIM_TIMEBASE_START macro.
 #endif
-
-
+#endif
 
 #ifndef TTIM_TIMEBASE_IS_RUNNING
 #error ttim_config.h must define wrappers for TTIM_TIMEBASE_IS_RUNNING

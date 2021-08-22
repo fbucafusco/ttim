@@ -1148,7 +1148,6 @@ void test_TTIM_13()
     TEST_ASSERT_FALSE( ttim_is_timedout( hnd_group[2] )  );
 }
 
-
 /**
    @brief tries timeouts where the callback restarts the timer
  */
@@ -1183,6 +1182,32 @@ void test_TTIM_Stop_After_Elapsed1()
 
 }
 
+void test_ttim_equal_timer_values()
+{
+    PRINTF( "%s ------------------------------- \n\n", __FUNCTION__ );
+
+    ttim_set( hnd_group[0], 15, NULL, NULL );
+    ttim_set( hnd_group[1], 15, NULL, NULL );
+    ttim_set( hnd_group[2], 15, NULL, NULL );
+    ttim_set( hnd_group[3], 30, NULL, NULL );
+
+    /* starts  */
+    ttim_start( hnd_group[0] );
+    ttim_start( hnd_group[1] );
+    ttim_start( hnd_group[2] );
+    ttim_start( hnd_group[3] );
+
+    /* the hnd_group[2] must timeout, and restart */
+    simulate_ticks( 16 );
+
+    TEST_ASSERT_TRUE( ttim_is_timedout( hnd_group[0] ) );
+    TEST_ASSERT_TRUE( ttim_is_timedout( hnd_group[1] ) );
+    TEST_ASSERT_TRUE( ttim_is_timedout( hnd_group[2] ) );
+    TEST_ASSERT_FALSE( ttim_is_timedout( hnd_group[3] ) );
+
+
+}
+
 #if 0
 /**
    @brief Main test function
@@ -1193,8 +1218,8 @@ int main()
 {
     UNITY_BEGIN();
 
+    RUN_TEST( test_ttim_equal_timer_values  );
     RUN_TEST( test_TTIM_Stop_After_Elapsed1  );
-
     RUN_TEST( test_TTIM_0  );
 
     RUN_TEST( test_TTIM_13 );
