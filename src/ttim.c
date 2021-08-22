@@ -401,6 +401,10 @@ TTIM_STATIC void _ttim_timebase_start( TTIM_COUNT_T time )
     time = TTIM_RESOLUTION ;
 #endif
 
+    if( time==0 )
+    {
+        return;
+    }
 
 #ifdef TTIM_TIMEBASE_TYPE
     is_running = TTIM_TIMEBASE_IS_RUNNING( &time_base_obj );

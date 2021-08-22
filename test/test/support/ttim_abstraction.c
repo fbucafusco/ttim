@@ -16,6 +16,8 @@ void timebase_init( mcu_timer_t* hnd )
 
 void timebase_start( mcu_timer_t* hnd, uint32_t time )
 {
+    TEST_ASSERT_MESSAGE( time>0,"the time base is started with 0 ticks" );
+
     uint32_t temp = ( hnd )->timeout;
     if( timebase_is_running( hnd ) )
     {

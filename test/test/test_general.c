@@ -1179,9 +1179,12 @@ void test_TTIM_Stop_After_Elapsed1()
     /* FOR TEST ONLY: remaining time for the timebase to tick is 6 */
     TEST_ASSERT_EQUAL( 11, timebase_get_remaining( &time_base_obj ) );
 #endif
-
 }
 
+/**
+   @brief tries timers with equal values and callbacks that restart the timer
+
+ */
 void test_ttim_equal_timer_values()
 {
     PRINTF( "%s ------------------------------- \n\n", __FUNCTION__ );
@@ -1205,6 +1208,17 @@ void test_ttim_equal_timer_values()
     TEST_ASSERT_TRUE( ttim_is_timedout( hnd_group[2] ) );
     TEST_ASSERT_FALSE( ttim_is_timedout( hnd_group[3] ) );
 
+    ttim_set_n_start( hnd_group[0], 15, tim_callback_active, NULL  );
+    ttim_set_n_start( hnd_group[1], 15, tim_callback_active, NULL  );
+    ttim_set_n_start( hnd_group[2], 15, tim_callback_active, NULL  );
+    ttim_set_n_start( hnd_group[3], 30, tim_callback_active, NULL  );
+
+    simulate_ticks( 16 );
+
+    TEST_ASSERT_FALSE( ttim_is_timedout( hnd_group[0] ) );
+    TEST_ASSERT_FALSE( ttim_is_timedout( hnd_group[1] ) );
+    TEST_ASSERT_FALSE( ttim_is_timedout( hnd_group[2] ) );
+    TEST_ASSERT_FALSE( ttim_is_timedout( hnd_group[3] ) );
 
 }
 
