@@ -3,7 +3,7 @@
 
 # **Tickless Timer (ttim)**
 
-This library aims to provide to baremetal programs the hability to implement asynchronous timers without
+This library aims to provide to baremetal programs the ability to implement asynchronous timers without
 the need to tick periodically and, then, consume less power.
 
 It can be used to implement time management modules in simple tickless RTOSses.
