@@ -6,6 +6,9 @@
 
 #include "ttim_config.h"
 
+/* TODO : UNIFY INSERT*/
+/* TODO: IMPROVE REINSERT*/
+/* TODO: the 31 bit is number is nor portable. It depends on TTIM_COUNT_T */
 
 /* CONSTANTS =========================================================================== */
 #define TTIM_MM_MODE_STATIC                         1
@@ -27,6 +30,15 @@
 #define TTIM_PERIODIC_TICK  0
 #endif
 
+#ifndef TTIM_ALLOW_PERIODIC_TIMERS
+/* Defines if periodic timers are allowed
+    0: all the created timers are one shot
+    1: the user can choose to make a timer periodic
+ */
+#define TTIM_ALLOW_PERIODIC_TIMERS  1
+#endif
+
+
 #ifndef TTIM_MM_MODE
 /* defines the memory management schemes use to create timers.
    TTIM_MM_MODE_STATIC : In this mode the number of timers is fixed to TTIM_COUNT, and all the objects
@@ -44,11 +56,14 @@
 #endif
 
 #ifndef TTIM_CB_MODE
-/* defines the interface for implementing the callbacks when any event occurs
+/*  defines the interface for implementing the callbacks when any event occurs
     TTIM_CB_MODE_NONE   : No callbacks are used. The user should poll the timer status.
     TTIM_CB_MODE_SIMPLE : The callback is called by passing just the timer id
     TTIM_CB_MODE_PARAM  : The callback is called by passing the timer id that generated the call, and
                           a user parameter.
+
+    NOTE: the callbacks are called wherever context the user choose to execute ttim_update.
+          Also the callbacks are called outside any critical secion and can call any ttim_xxx method but the ttmi_update one.
 */
 #define TTIM_CB_MODE    TTIM_CB_MODE_PARAM
 #endif
@@ -67,13 +82,14 @@
 
 #ifndef TTIM_COUNT_T
 /**
-   @brief Maximum number of concurrent timers for TTIM_MM_MODE_STATIC
+   @brief Defines the range count fot the timers
  */
 #define TTIM_COUNT_T        uint32_t
 #endif
 
 /* CONDITIONALS ===================================================================== */
-#define TTIM_INVALID_TIME    ((TTIM_COUNT_T)(~((TTIM_COUNT_T)0 ))>>1)
+#define TTIM_INVALID_TIME    ((TTIM_COUNT_T)(~((TTIM_COUNT_T)0 ))>>1) //the >>1 is because the count and remaining time is 31 wide. 
+
 
 #if TTIM_MM_MODE==TTIM_MM_MODE_STATIC
 #define TTIM_INVALID_HND     TTIM_COUNT
@@ -91,7 +107,7 @@ typedef void callback_t( TTIM_HND_T hnd, void*param );
 typedef struct ttim_node_t_
 {
     struct ttim_node_t_*    next;
-    TTIM_COUNT_T            t;
+    TTIM_COUNT_T            t;      /* time diference with the next one */
 } ttim_node_t;
 
 typedef struct ttim_t_
@@ -99,7 +115,11 @@ typedef struct ttim_t_
     /* node that points to next active timer and has the time difference with it.*/
     ttim_node_t             node;
 
-    TTIM_COUNT_T            remining_time;
+    TTIM_COUNT_T            remining_time:31;
+
+#if TTIM_ALLOW_PERIODIC_TIMERS == 1
+    TTIM_COUNT_T            periodic:1;
+#endif
 
     TTIM_COUNT_T            count:31;
     TTIM_COUNT_T            paused:1;
@@ -107,6 +127,7 @@ typedef struct ttim_t_
 #if TTIM_CB_MODE!=TTIM_CB_MODE_NONE
     void*                   timeout_callback;
 #endif
+
 #if TTIM_CB_MODE==TTIM_CB_MODE_PARAM
     void*                   timeout_param;
 #endif
@@ -114,18 +135,22 @@ typedef struct ttim_t_
 } ttim_t;
 
 /* node that points to next active timer and has the time difference with it.*/
-typedef ttim_node_t ttim_list_t ;
+typedef ttim_node_t ttim_list_t;
 
 /* FUNCTION PROTOTYPES *************************************************************** */
 void ttim_init( void );
 void ttim_start( TTIM_HND_T hnd );
+
+#if TTIM_ALLOW_PERIODIC_TIMERS == 1
+void ttim_set_periodic( TTIM_HND_T hnd );
+#endif
 
 #if TTIM_CB_MODE==TTIM_CB_MODE_SIMPLE
 void ttim_set( TTIM_HND_T hnd, TTIM_COUNT_T time, void* cb );
 void ttim_set_n_start( TTIM_HND_T hnd, TTIM_COUNT_T time, void* cb );
 #elif TTIM_CB_MODE==TTIM_CB_MODE_PARAM
 void ttim_set( TTIM_HND_T hnd, TTIM_COUNT_T time, void* cb,void*param );
-void ttim_set_n_start( TTIM_HND_T hnd, TTIM_COUNT_T time, void* cb,void*param );
+void ( TTIM_HND_T hnd, TTIM_COUNT_T time, void* cb,void*param );
 #else
 void ttim_set( TTIM_HND_T hnd, TTIM_COUNT_T time );
 void ttim_set_n_start( TTIM_HND_T hnd, TTIM_COUNT_T time );
@@ -144,11 +169,10 @@ TTIM_HND_T ttim_ctor( TTIM_HND_T hnd );
 TTIM_HND_T ttim_dtor( TTIM_HND_T hnd );
 #endif
 
+#if TTIM_CALC_STATS == 1
+void ttim_print_stats();
+#endif
+
 #endif // TTIM_H
 
-/*
-TBI : To be immplemented
-*/
-
-
-/* v1.04 */
+/* v1.05 */

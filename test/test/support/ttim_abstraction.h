@@ -18,4 +18,5 @@ bool timebase_is_timedout( mcu_timer_t* hnd );
 int32_t timebase_timedout( mcu_timer_t* hnd );
 uint32_t timebase_get_elapsed( mcu_timer_t* hnd );
 void timebase_stop( mcu_timer_t* hnd  );
+uint32_t timebase_get_remaining( mcu_timer_t* hnd );
 #endif
