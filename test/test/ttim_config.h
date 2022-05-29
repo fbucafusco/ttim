@@ -4,14 +4,14 @@
 #include "unity.h"
 #include "ttim_abstraction.h"
 
-#define DEBUG_DURING_TESTING      0
-#define TTIM_CALC_STATS      1
+#define DEBUG_DURING_TESTING        0
+#define TTIM_CALC_STATS             1
 #define TTIM_STATIC
 
 /* GENERAL =============================================================================================================================== */
-#if DEBUG_DURING_TESTING==1
-#define TTIM_ASSERT(A)                  TEST_ASSERT_TRUE_MESSAGE( A , "TTIM INTERNAL ERROR" )
-#endif
+// #if DEBUG_DURING_TESTING==1
+#define TTIM_ASSERT(A)                  test_assert(A, __FUNCTION__, __LINE__) ;
+// #endif
 
 #define TTIM_CB_MODE                    TTIM_CB_MODE_PARAM
 
@@ -26,9 +26,10 @@
 #define TTIM_FREE(PTR)                  free(PTR)
 #endif
 
+
 /* Critical section */
-#define TTIM_CRITICAL_START()        extern int isr_dis; isr_dis++; /*printf("+1\n"); */ if( isr_dis >= 2)  { printf("recursive critical section at %s %u", __FUNCTION__, __LINE__); TEST_ASSERT( 0 );  } ; fflush(stdout);
-#define TTIM_CRITICAL_END()          isr_dis--; /* printf("-1\n"); fflush(stdout);*/
+#define TTIM_CRITICAL_START()           test_crtical_start( __FUNCTION__ , __LINE__ );
+#define TTIM_CRITICAL_END()             test_crtical_end()
 
 /* TIMEBASE LL CONFIGURATION FOR TESTING ================================================================================================ */
 #define TTIM_TIMEBASE_TYPE                          mcu_timer_t

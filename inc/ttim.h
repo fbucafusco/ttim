@@ -6,9 +6,11 @@
 
 #include "ttim_config.h"
 
-/* TODO : UNIFY INSERT*/
+/* TODO: UNIFY INSERT*/
 /* TODO: IMPROVE REINSERT*/
-/* TODO: the 31 bit is number is nor portable. It depends on TTIM_COUNT_T */
+/* TODO: the 31 bit is number is not portable. It depends on TTIM_COUNT_T */
+/* TODO: create a doubl linked list to improve remove speed */
+/* TODO: _ttim_timebase_start still missing some coverage paths. Also is horribly written. */
 
 /* CONSTANTS =========================================================================== */
 #define TTIM_MM_MODE_STATIC                         1
@@ -135,7 +137,11 @@ typedef struct ttim_t_
 } ttim_t;
 
 /* node that points to next active timer and has the time difference with it.*/
-typedef ttim_node_t ttim_list_t;
+typedef struct ttim
+{
+    ttim_node_t             entry;
+    //    int                     element_count;
+} ttim_list_t;
 
 /* FUNCTION PROTOTYPES *************************************************************** */
 void ttim_init( void );
@@ -150,7 +156,7 @@ void ttim_set( TTIM_HND_T hnd, TTIM_COUNT_T time, void* cb );
 void ttim_set_n_start( TTIM_HND_T hnd, TTIM_COUNT_T time, void* cb );
 #elif TTIM_CB_MODE==TTIM_CB_MODE_PARAM
 void ttim_set( TTIM_HND_T hnd, TTIM_COUNT_T time, void* cb,void*param );
-void ( TTIM_HND_T hnd, TTIM_COUNT_T time, void* cb,void*param );
+void ttim_set_n_start( TTIM_HND_T hnd, TTIM_COUNT_T time, void* cb,void*param );
 #else
 void ttim_set( TTIM_HND_T hnd, TTIM_COUNT_T time );
 void ttim_set_n_start( TTIM_HND_T hnd, TTIM_COUNT_T time );

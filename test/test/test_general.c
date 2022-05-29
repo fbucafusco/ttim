@@ -173,9 +173,37 @@ void print_tim_list()
     fflush( stdout );
 }
 
-void test_TTIM_0a()
+/**
+   @brief Tests basic eavios, and internal timer states
+
+ */
+void test_ttim_basica()
 {
     PRINTF( "%s ------------------------------- \n\n", __FUNCTION__ );
+
+    /*  construct an invalid timer object  */
+
+#if TTIM_MM_MODE == TTIM_MM_MODE_STATIC
+    TEST_ASSERT_EQUAL( TTIM_INVALID_HND, ttim_ctor( TTIM_INVALID_HND ) );
+#elif TTIM_MM_MODE == TTIM_MM_MODE_DYNAMIC
+    // TEST_ASSERT_EQUAL( TTIM_INVALID_HND, ttim_ctor( TTIM_INVALID_HND ) );
+#endif
+
+    /* general init states */
+    TEST_ASSERT_FALSE( ttim_is_timedout( hnd_group[0] ) );
+    TEST_ASSERT_FALSE( ttim_is_timedout( hnd_group[1] ) );
+    TEST_ASSERT_FALSE( ttim_is_timedout( hnd_group[2] ) );
+    TEST_ASSERT_FALSE( ttim_is_timedout( hnd_group[3] ) );
+
+    TEST_ASSERT_FALSE( ttim_is_stopped( hnd_group[0] ) );
+    TEST_ASSERT_FALSE( ttim_is_stopped( hnd_group[1] ) );
+    TEST_ASSERT_FALSE( ttim_is_stopped( hnd_group[2] ) );
+    TEST_ASSERT_FALSE( ttim_is_stopped( hnd_group[3] ) );
+
+    TEST_ASSERT_FALSE( _ttim_is_paused( hnd_group[0] ) );
+    TEST_ASSERT_FALSE( _ttim_is_paused( hnd_group[1] ) );
+    TEST_ASSERT_FALSE( _ttim_is_paused( hnd_group[2] ) );
+    TEST_ASSERT_FALSE( _ttim_is_paused( hnd_group[3] ) );
 
     TEST_ASSERT_FALSE( _ttim_time_is_valid( ttim_get_remining_time( hnd_group[0] ) ) );
 
@@ -184,11 +212,26 @@ void test_TTIM_0a()
     ttim_set( hnd_group[2], 15, NULL, NULL );
     ttim_set( hnd_group[3], 33, NULL, NULL );
 
+    TEST_ASSERT_FALSE( ttim_is_timedout( hnd_group[0] ) );
+    TEST_ASSERT_FALSE( ttim_is_timedout( hnd_group[1] ) );
+    TEST_ASSERT_FALSE( ttim_is_timedout( hnd_group[2] ) );
+    TEST_ASSERT_FALSE( ttim_is_timedout( hnd_group[3] ) );
+
+    TEST_ASSERT_FALSE( _ttim_is_paused( hnd_group[0] ) );
+    TEST_ASSERT_FALSE( _ttim_is_paused( hnd_group[1] ) );
+    TEST_ASSERT_FALSE( _ttim_is_paused( hnd_group[2] ) );
+    TEST_ASSERT_FALSE( _ttim_is_paused( hnd_group[3] ) );
+
     TEST_ASSERT_FALSE( _ttim_time_is_valid( ttim_get_remining_time( hnd_group[0] ) ) );
 
     ttim_start( hnd_group[0] );
     ttim_start( hnd_group[1] );
     ttim_start( hnd_group[3] );
+
+    TEST_ASSERT_FALSE( _ttim_is_paused( hnd_group[0] ) );
+    TEST_ASSERT_FALSE( _ttim_is_paused( hnd_group[1] ) );
+    TEST_ASSERT_FALSE( _ttim_is_paused( hnd_group[2] ) );
+    TEST_ASSERT_FALSE( _ttim_is_paused( hnd_group[3] ) );
 
     print_tim_list(); // 0
 
@@ -226,7 +269,7 @@ void test_TTIM_0a()
     TEST_ASSERT_EQUAL( 27, ttim_get_remining_time( hnd_group[3] ) );
 }
 
-void test_TTIM_0()
+void test_ttim_basicb()
 {
     PRINTF( "%s ------------------------------- \n\n", __FUNCTION__ );
 
@@ -305,13 +348,18 @@ void test_TTIM_0()
     TEST_ASSERT_EQUAL( 23, ttim_get_remining_time( hnd_group[2] ) );
     TEST_ASSERT_EQUAL( 1, ttim_get_remining_time( hnd_group[3] ) );
 
+    TEST_ASSERT_FALSE( ttim_is_stopped( hnd_group[0] ) );
+    TEST_ASSERT_FALSE( ttim_is_stopped( hnd_group[1] ) );
+    TEST_ASSERT_FALSE( ttim_is_stopped( hnd_group[2] ) );
+    TEST_ASSERT_FALSE( ttim_is_stopped( hnd_group[3] ) );
+
     print_tim_list(); // 5
 }
 
 /**
  * test simple callbacks
  */
-void test_TTIM_1()
+void test_ttim_simple_callback()
 {
     PRINTF( "%s ------------------------------- \n\n", __FUNCTION__ );
 
@@ -406,7 +454,7 @@ void test_TTIM_1()
    @brief  tries _ttim_remaining_time
            low level method
  */
-void test_TTIM_2()
+void test_ttim_low_level()
 {
     PRINTF( "%s ------------------------------- \n\n", __FUNCTION__ );
 
@@ -471,7 +519,7 @@ void test_TTIM_2()
    @brief tries ttim_stop
 
  */
-void test_TTIM_4()
+void test_ttim_stopping()
 {
     PRINTF( "%s ------------------------------- \n\n", __FUNCTION__ );
 
@@ -595,7 +643,7 @@ void test_TTIM_4()
 /**
    @brief tries ttim_pause -> ttim_start
  */
-void test_TTIM_5()
+void test_ttim_pause_then_start()
 {
     PRINTF( "%s ------------------------------- \n\n", __FUNCTION__ );
 
@@ -644,7 +692,7 @@ void test_TTIM_5()
    @brief tries ttim_get_remining_time y a combo of Pause, Stop & Start
 
  */
-void test_TTIM_6()
+void test_ttim_dynamic_behavior()
 {
     PRINTF( "%s ------------------------------- \n\n", __FUNCTION__ );
 
@@ -734,7 +782,7 @@ void test_TTIM_6()
    @brief tries two calls to  ttim_start
 
  */
-void test_TTIM_7()
+void test_ttim_starting()
 {
     PRINTF( "%s ------------------------------- \n\n", __FUNCTION__ );
     ttim_set( hnd_group[0], 10, NULL, NULL );
@@ -778,7 +826,7 @@ void test_TTIM_7()
 /**
    @brief tries internal behaviors
  */
-void test_TTIM_8()
+void test_ttim_internal()
 {
     PRINTF( "%s ------------------------------- \n\n", __FUNCTION__ );
 
@@ -800,7 +848,7 @@ void test_TTIM_8()
 /**
    @brief tries ttim_set_n_start
  */
-void test_TTIM_9()
+void test_ttim_set_n_start_usage()
 {
     PRINTF( "%s ------------------------------- \n\n", __FUNCTION__ );
 
@@ -910,7 +958,7 @@ void test_TTIM_9()
    @brief extra tries
 
  */
-void test_TTIM_10()
+void test_ttim_changing_timebase()
 {
     PRINTF( "%s ------------------------------- \n\n", __FUNCTION__ );
     ttim_set( hnd_group[0], 10, tim_callback, NULL );
@@ -983,7 +1031,7 @@ void test_TTIM_10()
    @brief equal timeouts and usage of ttim_reset_n_restart
 
  */
-void test_TTIM_11()
+void test_ttim_equal_timeouts()
 {
     PRINTF( "%s ------------------------------- \n\n", __FUNCTION__ );
 
@@ -1030,7 +1078,7 @@ void test_TTIM_11()
 /**
    @brief tries ttim_is_timedout and some state machine transition
  */
-void test_TTIM_12()
+void test_ttim_timedout()
 {
     PRINTF( "%s ------------------------------- \n\n", __FUNCTION__ );
 
@@ -1063,7 +1111,7 @@ void test_TTIM_12()
 /**
    @brief tries timeouts where the callback restarts the timer
  */
-void test_TTIM_13()
+void test_periodic_by_restarting_on_callback()
 {
     PRINTF( "%s ------------------------------- \n\n", __FUNCTION__ );
 
@@ -1103,7 +1151,7 @@ void test_TTIM_13()
 /**
    @brief tries timeouts where the callback restarts the timer
  */
-void test_TTIM_Stop_After_Elapsed1()
+void test_ttim_stop_after_elapsed()
 {
     PRINTF( "%s ------------------------------- \n\n", __FUNCTION__ );
 
@@ -1172,7 +1220,28 @@ void test_ttim_equal_timer_values()
     TEST_ASSERT_FALSE( ttim_is_timedout( hnd_group[3] ) );
 }
 
-void test_TTIM_periodic()
+#if TTIM_PERIODIC_TICK == 1
+/**
+   @brief Test internal assertions for periodic tick mode
+
+ */
+void test_tim_periodic_tick()
+{
+    PRINTF( "%s ------------------------------- \n\n", __FUNCTION__ );
+
+    ttim_set( hnd_group[0], 10, NULL, NULL );
+
+    ttim_start( hnd_group[0] );
+
+    simulate_ticks( 6 );
+
+    ttim_stop( hnd_group[0] );
+
+    simulate_ticks( 6 );
+}
+#endif
+
+void test_tim_periodic()
 {
     PRINTF( "%s ------------------------------- \n\n", __FUNCTION__ );
 
@@ -1182,13 +1251,34 @@ void test_TTIM_periodic()
     ttim_set( hnd_group[2], 15, NULL, NULL );
     ttim_set( hnd_group[3], 33, NULL, NULL );
 
+    /* setting an invalid time won't break anything */
+    ttim_set( hnd_group[3], TTIM_INVALID_TIME, NULL, NULL );
+
+    /* setting an timer won't break anything */
+    ttim_set( TTIM_INVALID_HND, 123, NULL, NULL );
+
     ttim_start( hnd_group[0] );
     ttim_start( hnd_group[1] );
     ttim_start( hnd_group[3] );
 
+    /* pause a timer that is not running , won't break anything */
+    ttim_pause( hnd_group[2] );
+
+    /* resetting and restarting an invaid timer */
+    ttim_reset_n_restart( TTIM_INVALID_HND );
+
+    /* starting an invalid timer */
+    ttim_start( TTIM_INVALID_HND );
+
+    /* try to set periodic an invalid handle */
+    ttim_set_periodic( TTIM_INVALID_HND );
+
     print_tim_list(); // 0
 
     simulate_ticks( 6 );
+
+    /* stop an invalid timer */
+    ttim_stop( TTIM_INVALID_HND );
 
     print_tim_list(); // 1
 
@@ -1204,11 +1294,40 @@ void test_TTIM_periodic()
 
     simulate_ticks( 6 );
 
+    /* pausing an invalid timer */
+    ttim_pause( TTIM_INVALID_HND );
+
     TEST_ASSERT_EQUAL( 8, ttim_get_remining_time( hnd_group[0] ) );
     TEST_ASSERT_EQUAL( 5, ttim_get_remining_time( hnd_group[1] ) );
     TEST_ASSERT_EQUAL( 21, ttim_get_remining_time( hnd_group[3] ) );
 
-    print_tim_list(); // 0
+    print_tim_list(); // 2
+
+    simulate_ticks( 8 );
+
+    TEST_ASSERT_EQUAL( 10, ttim_get_remining_time( hnd_group[0] ) );
+    TEST_ASSERT_FALSE( _ttim_time_is_valid( ttim_get_remining_time( hnd_group[1] ) ) );
+    TEST_ASSERT_EQUAL( 13, ttim_get_remining_time( hnd_group[3] ) );
+
+    TEST_ASSERT_TRUE( ttim_is_timedout( hnd_group[1] ) );
+
+    print_tim_list(); // 3
+
+    ttim_set_n_start( hnd_group[1], 15, NULL, NULL );
+
+    TEST_ASSERT_EQUAL( 10, ttim_get_remining_time( hnd_group[0] ) );
+    TEST_ASSERT_EQUAL( 15, ttim_get_remining_time( hnd_group[1] ) );
+    TEST_ASSERT_EQUAL( 13, ttim_get_remining_time( hnd_group[3] ) );
+
+    print_tim_list(); // 4
+
+    simulate_ticks( 13 );
+
+    TEST_ASSERT_EQUAL( 7, ttim_get_remining_time( hnd_group[0] ) );
+    TEST_ASSERT_EQUAL( 2, ttim_get_remining_time( hnd_group[1] ) );
+    TEST_ASSERT_FALSE( _ttim_time_is_valid( ttim_get_remining_time( hnd_group[3] ) ) );
+
+    print_tim_list(); // 4
 }
 
 void test_TTIM_stats()
@@ -1227,23 +1346,23 @@ int main()
     UNITY_BEGIN();
 
     RUN_TEST( test_ttim_equal_timer_values  );
-    RUN_TEST( test_TTIM_Stop_After_Elapsed1  );
-    RUN_TEST( test_TTIM_0  );
+    RUN_TEST( test_ttim_stop_after_elapsed  );
+    RUN_TEST( test_ttim_basicb  );
 
-    RUN_TEST( test_TTIM_13 );
-    RUN_TEST( test_TTIM_12 );
+    RUN_TEST( test_periodic_by_restarting_on_callback );
+    RUN_TEST( test_ttim_timedout );
 
-    RUN_TEST( test_TTIM_0a );
+    RUN_TEST( test_ttim_basica );
 
-    RUN_TEST( test_TTIM_1  );
-    RUN_TEST( test_TTIM_2  );
-    RUN_TEST( test_TTIM_4  );
-    RUN_TEST( test_TTIM_5  );
-    RUN_TEST( test_TTIM_6  );
-    RUN_TEST( test_TTIM_7  );
-    RUN_TEST( test_TTIM_8  );
-    RUN_TEST( test_TTIM_9  );
-    RUN_TEST( test_TTIM_10 );
+    RUN_TEST( test_ttim_simple_callback  );
+    RUN_TEST( test_ttim_low_level  );
+    RUN_TEST( test_ttim_stopping  );
+    RUN_TEST( test_ttim_pause_then_start  );
+    RUN_TEST( test_ttim_dynamic_behavior  );
+    RUN_TEST( test_ttim_starting  );
+    RUN_TEST( test_ttim_internal  );
+    RUN_TEST( test_ttim_set_n_start_usage  );
+    RUN_TEST( test_ttim_changing_timebase );
 
     return UNITY_END();
 }

@@ -21,12 +21,12 @@ test_static:
    artifacts:
     paths:
       - test/build/*
-test_static_periodic:
+test_static_periodic_tick:
    stage: test
    script:
       - cd test
       - ceedling clean
-      - ceedling options:static_periodic gcov:all utils:gcov
+      - ceedling options:static_periodic_tick gcov:all utils:gcov
    artifacts:
     paths:
       - test/build/*

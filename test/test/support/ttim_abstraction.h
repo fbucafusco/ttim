@@ -19,4 +19,12 @@ int32_t timebase_timedout( mcu_timer_t* hnd );
 uint32_t timebase_get_elapsed( mcu_timer_t* hnd );
 void timebase_stop( mcu_timer_t* hnd  );
 uint32_t timebase_get_remaining( mcu_timer_t* hnd );
+
+
+void test_crtical_start( const char* fcn, int line );
+void test_crtical_end( void );
+void test_assert( bool condition, const char *fcn, int line );
+
+
+
 #endif
