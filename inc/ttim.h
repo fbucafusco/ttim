@@ -6,8 +6,7 @@
 
 #include "ttim_config.h"
 
-/* TODO: UNIFY INSERT*/
-/* TODO: IMPROVE REINSERT*/
+  
 /* TODO: the 31 bit is number is not portable. It depends on TTIM_COUNT_T */
 /* TODO: create a doubl linked list to improve remove speed */
 /* TODO: _ttim_timebase_start still missing some coverage paths. Also is horribly written. */
@@ -175,9 +174,7 @@ TTIM_HND_T ttim_ctor( TTIM_HND_T hnd );
 TTIM_HND_T ttim_dtor( TTIM_HND_T hnd );
 #endif
 
-#if TTIM_CALC_STATS == 1
-void ttim_print_stats();
-#endif
+
 
 #endif // TTIM_H
 

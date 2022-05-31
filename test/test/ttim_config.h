@@ -5,7 +5,6 @@
 #include "ttim_abstraction.h"
 
 #define DEBUG_DURING_TESTING        0
-#define TTIM_CALC_STATS             1
 #define TTIM_STATIC
 
 /* GENERAL =============================================================================================================================== */

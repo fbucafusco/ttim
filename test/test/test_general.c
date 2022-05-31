@@ -142,7 +142,7 @@ void tim_callback_active( TTIM_HND_T hnd, void *param )
 
 void print_tim_list()
 {
-    ttim_node_t *node = &ttim_list;
+    ttim_node_t *node = &ttim_list.entry;
     TTIM_COUNT_T temp = node->t;
 
     PRINTF( "[%02u] el: %02u tb: %02u {", print_idx, timebase_get_elapsed( &time_base_obj ), node->t );
@@ -1330,10 +1330,6 @@ void test_tim_periodic()
     print_tim_list(); // 4
 }
 
-void test_TTIM_stats()
-{
-    ttim_print_stats();
-}
 
 #if 0
 /**

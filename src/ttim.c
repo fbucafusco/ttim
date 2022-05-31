@@ -58,7 +58,7 @@ uint32_t ttim_update_count = 0;
 
    @param node
    @return TTIM_STATIC
- */
+    */
 TTIM_STATIC bool _ttim_node_invalidate( ttim_node_t *node )
 {
     node->t = TTIM_INVALID_TIME;
@@ -568,6 +568,82 @@ TTIM_STATIC bool _ttim_timebase_stop_or_restart( bool any_timer_running )
     return any_timer_running;
 }
 
+ttim_node_t *_ttim_find_by_time( ttim_node_t *list_node, TTIM_COUNT_T count_to, TTIM_COUNT_T *acum_ )
+{
+    // Insert
+    while ( 1 )
+    {
+        if ( list_node->next == TTIM_INVALID_NEXT )
+        {
+            /* reach the last node in the list, insert at the end  */
+            break;
+        }
+
+        *acum_ += list_node->t;
+
+        if ( *acum_ > count_to )
+        {
+            /* insert the new timer between node and node->next */
+            break;
+        }
+
+        /* jump to the next */
+        list_node = list_node->next;
+    }
+
+    return list_node;
+}
+// TTIM_STATIC TTIM_COUNT_T _ttim_list_remove_first( ttim_list_t *list )
+
+/**
+   @brief Inserts a timer with an final count, into the provided list.
+
+   @param list
+   @param timer
+   @param total
+ */
+void _ttim_list_ttim_insert( ttim_list_t *list, ttim_t *timer, TTIM_COUNT_T total )
+{
+    ttim_node_t *node = &list->entry;
+    // TTIM_COUNT_T total = timer->count;
+
+    uint32_t acum_elapsed = 0 - _ttim_timebase_elapsed();
+
+    // printf("total = %d elap %d\n", total, acum_elapsed);
+
+    TTIM_ASSERT( total != TTIM_INVALID_TIME );
+
+    node = _ttim_find_by_time( node, total, &acum_elapsed );
+
+    if ( node->next == TTIM_INVALID_NEXT )
+    {
+        /* Reach the last node in the list, insert at the end.
+           This case also handles when the list is empty  */
+        timer->node.t = TTIM_INVALID_TIME;
+        node->t = total - acum_elapsed;
+    }
+    else
+    {
+        /* insert in the middle, or at the beggining */
+        timer->node.t = acum_elapsed - total;
+
+        if ( node == &ttim_list )
+        {
+            node->t = total; // there were nodes but the new one will be de next
+        }
+        else
+        {
+            node->t -= timer->node.t;
+        }
+    }
+
+    timer->node.next = node->next; // if invalid is ok, if not, it is ok also
+    timer->remining_time = total;
+    timer->paused = 0;
+
+    node->next = ( ttim_node_t * )timer;
+}
+
 /**
    @brief Stop, Reset and Start a timer keeping its prvious caracteristics (count, callback, param)
           EQUIV STOP RESTART
@@ -589,87 +665,13 @@ void _ttim_reinsert( TTIM_HND_T hnd )
     /* remove the timer from te timer list */
     _ttim_list_remove( &ttim_list, hnd ); // if hnd is the first node, the removal is O(1)  _ttim_list_remove_first
 
-    timer->remining_time = TTIM_INVALID_TIME;
-    timer->paused = 0;
-
     // Set ************************
-    TTIM_ASSERT( timer->count != TTIM_INVALID_TIME );
-
-    // start ************************
-
-    /* up cast the list to ttim_t structure */
-    ttim_node_t *tim = &ttim_list.entry;
-
-    TTIM_COUNT_T count_to;
-    uint32_t acum_elapsed = 0;
-
-    count_to = timer->count;
-
-    TTIM_COUNT_T acum = 0 - _ttim_timebase_elapsed();   /* is a negative number, but then, is summed with tim->t that MUST be greater than elapsed_time */
-    TTIM_ASSERT( timer->count > -1*acum );
-    
-    // printf("acum = %d\n", acum);
 
 #if TTIM_CALC_STATS == 1
     ttim_reinsert_count++;
 #endif
 
-    // Insert
-    while ( 1 )
-    {
-#if TTIM_CALC_STATS == 1
-        ttim_loops_on_reinsert_count++;
-#endif
-
-        if ( tim->next == TTIM_INVALID_NEXT )
-        {
-            /* reach the last node in the list, insert at the end  */
-            break;
-        }
-
-        acum += tim->t;
-        acum_elapsed = acum;
-
-        if ( acum_elapsed > count_to )
-        {
-            /* insert the new timer between node and node->next */
-            break;
-        }
-
-        /* jump to the next */
-        tim = tim->next;
-    }
-
-    if ( tim->next == TTIM_INVALID_NEXT )
-    {
-        /* Reach the last node in the list, insert at the end.
-           This case also handles when the list is empty  */
-        _ttim_node_invalidate( ( ttim_node_t * )timer );
-
-        tim->next = ( ttim_node_t * )timer;
-        tim->t = count_to - acum_elapsed;
-    }
-    else
-    {
-        timer->node.next = tim->next;
-        tim->next = ( ttim_node_t * )timer;
-
-        timer->node.t = acum_elapsed - count_to;
-
-        if ( tim == &ttim_list )
-        {
-            tim->t = count_to; // there were nodes but the new one will be de next
-        }
-        else
-        {
-            tim->t -= timer->node.t;
-        }
-    }
-
-    timer->remining_time = count_to;
-    timer->paused = 0;
-
-    // ttim_list.element_count++;
+    _ttim_list_ttim_insert( &ttim_list, timer, timer->count );
 
     /* Starts the time base, conditionally.
        This action is a system process that should not be within a critical section. */
@@ -934,11 +936,10 @@ void ttim_start( TTIM_HND_T hnd )
         }
 
         /* up cast the list to ttim_t structure */
-        // ttim_t *tim = (ttim_t *) &ttim_list;
         ttim_node_t *tim = &ttim_list.entry;
 
         TTIM_COUNT_T count_to;
-        uint32_t acum_elapsed = 0;
+        // uint32_t acum_elapsed = 0;
 
         /* if the timer was paused or not */
         if ( !_ttim_is_paused( hnd ) )
@@ -958,64 +959,7 @@ void ttim_start( TTIM_HND_T hnd )
         ttim_start_count++;
 #endif
 
-        // Insert
-        while ( 1 )
-        {
-#if TTIM_CALC_STATS == 1
-            ttim_loops_on_start_count++;
-#endif
-
-            if ( tim->next == TTIM_INVALID_NEXT )
-            {
-                /* reach the last node in the list, insert at the end  */
-                break;
-            }
-
-            acum += tim->t;
-
-            acum_elapsed = acum - _ttim_timebase_elapsed();
-
-            if ( acum_elapsed > count_to )
-            {
-                /* insert the new timer between node and node->next */
-                break;
-            }
-
-            /* jump to the next */
-            tim = tim->next;
-        }
-
-        if ( tim->next == TTIM_INVALID_NEXT )
-        {
-            /* Reach the last node in the list, INSERT AT THE END.
-               This case also handles when the list is empty  */
-            _ttim_node_invalidate( ( ttim_node_t * )timer );
-
-            tim->next = ( ttim_node_t * )timer;
-            tim->t = count_to - acum_elapsed;
-        }
-        else
-        {
-            /* INSERTS IN THE MIDDLE OR AT THE BEGGINING */
-            timer->node.next = tim->next;
-            tim->next = ( ttim_node_t * )timer;
-
-            timer->node.t = acum_elapsed - count_to;
-
-            if ( tim == &ttim_list )
-            {
-                tim->t = count_to; // there were nodes but the new one will be de next
-            }
-            else
-            {
-                tim->t -= timer->node.t;
-            }
-        }
-
-        timer->remining_time = count_to;
-        timer->paused = 0;
-
-        // ttim_list.element_count++;
+        _ttim_list_ttim_insert( &ttim_list, timer, count_to );
 
         TTIM_CRITICAL_END();
 
