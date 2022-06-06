@@ -1,8 +1,8 @@
 ## **Introduction**
 
-This library provides interfaces for create software timers within baremetal programming.
+This library provides interfaces for create software timers on baremetal project.
 
-For running timers, the library it implements a list were the first element is the timer with the nearest timeo timeout value. That allows to process each tick interrupt with O(1) time complexity, for any number of running timers.
+For running timers, the library implements a list were the first element is the timer with the nearest timeout value. That allows to process each tick interrupt with O(1) time complexity, for any number of running timers.
 
 ### **Timer handlers**
 
@@ -37,7 +37,7 @@ Each timer has the following state machine. <br>
 
 ## **Library configuration**
 
-The configuration is made by including in the project the file **tracker_config.h**.
+The configuration is made by including in the project the file **ttim_config.h**.
 
 * **TTIM_CB_MODE:** Callback Mode. It termines the mechanism that the module will use to communicate with the application.
     * **TTIM_CB_MODE_NONE:** No callbacks are used. The user should poll the timer status via *ttim_is_timedout*.
@@ -56,14 +56,16 @@ The configuration is made by including in the project the file **tracker_config.
 * **TTIM_PERIODIC_TICK:** (DEFAULT = 0) It determines the algorithm for incrementing the partial timer counts. The user should call ttim_update() within a timer ISR. If 1, the isr will be fired in a regular basis.
 If 0, the isr will be fired aperdiodically, based on the created timer dynamics.
 
+## **Porting guide**
+ 
 * **Low level timebase configuration:** The user should provide configuration for all the low level timebase behavior. The confioguration is done by macros. **The user should have in mind that the hw timebase must have the desired range of timeouts needed**.
 
-    * **TTIM_TIMEBASE_TYPE:** Defines the object data type that instances the timebase mechanism. If defined all the macros below, should have a first parameter that defines the global object. If not define, the timebase is driven directly by modifying peripheral's registers.
-    * **TTIM_TIMEBASE_INIT(TIMER_HND):** Macro that should initialize the timebase hardware.
-    * **TTIM_TIMEBASE_START(TIMER_HND,TIME):** Macro that should start the timebase for a fiven TIME period (measured in the same unit that every timeout for each ttim object).
+    * **TTIM_TIMEBASE_TYPE:** Defines the object data type that instances the timebase mechanism. If defined all the macros below, should have a first parameter that defines the global object. If not define, the timebase is driven directly by modifying peripheral's registers or a global object.
+    * **TTIM_TIMEBASE_INIT(TIMER_HND):** Macro that should initialize the timebase hardware. Could be deined empty if the peripheral is initiated by other actor in the system. 
+    * **TTIM_TIMEBASE_START(TIMER_HND,TIME):** Macro that should start the timebase for a fiven TIME period (measured in the same unit that every timeout for each ttim object). I the time base is running when thi macro is called, the timer should be stoped before. 
     * **TTIM_TIMEBASE_STOP(TIMER_HND):** Macro that should stop the timebase.
-    * **TTIM_TIMEBASE_ELAPSED(TIMER_HND):** Macro that should return the elapsed time since TTIM_TIMEBASE_START was called.
-    * **TTIM_TIMEBASE_IS_RUNNING(TIMER_HND):** Macro that should return a positive number if the timebase is running or 0 if not.
+    * **TTIM_TIMEBASE_ELAPSED(TIMER_HND):** Macro that should return the elapsed time since TTIM_TIMEBASE_START was called, in the same time units chosen).
+    * **TTIM_TIMEBASE_IS_RUNNING(TIMER_HND):** Macro that should return a positive number if the timebase is running or 0 if not. 
     * **TTIM_TIMEBASE_IS_STOPPED(TIMER_HND):** Macro that should return a positive number if the timebase is stopped or 1 if not.
 
 * **System related configuration:**

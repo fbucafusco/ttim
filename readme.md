@@ -17,4 +17,4 @@ As an option (TTIM_PERIODIC_TICK==1), user choose to use regular periodic tick b
 | HW Platform | SW Platform | Description | URL |
 | :-: | :-: | :-: | :-: |
 | EDUCIAA | firmware_v3 + sapi | Baremetal 4 LEDs blinker | [link](https://github.com/fbucafusco/ttim_example_educiaa) |
-| DISCOVERY | CubeMX HAL | Baremetal 1 LEDs blinker |  link **COMMING SOON**    |
+| DISCOVERY 1475 IOT 1A | CubeMX HAL | Baremetal 4 text sender | [link](https://github.com/fbucafusco/ttim_example_stm32_iot1a)   |

@@ -59,7 +59,7 @@ uint32_t ttim_update_count = 0;
    @param node
    @return TTIM_STATIC
     */
-TTIM_STATIC bool _ttim_node_invalidate( ttim_node_t *node )
+TTIM_STATIC void _ttim_node_invalidate( ttim_node_t *node )
 {
     node->t = TTIM_INVALID_TIME;
     node->next = TTIM_INVALID_NEXT;
@@ -164,7 +164,7 @@ TTIM_STATIC TTIM_COUNT_T _ttim_timebase_elapsed()
    @param list
    @return TTIM_STATIC
  */
-TTIM_STATIC TTIM_COUNT_T _ttim_list_remove_first( ttim_list_t *list )
+TTIM_STATIC void _ttim_list_remove_first( ttim_list_t *list )
 {
     ttim_node_t *node = list->entry.next;
 
@@ -500,7 +500,6 @@ TTIM_STATIC bool _ttim_is_any_running()
 TTIM_STATIC void _ttim_timebase_start( TTIM_COUNT_T time )
 {
     bool start = false;
-    // bool is_running;
 
 #if TTIM_PERIODIC_TICK == 1
     /* for this mode, the value of the tick is fixed */
@@ -512,14 +511,6 @@ TTIM_STATIC void _ttim_timebase_start( TTIM_COUNT_T time )
         /* no need to start the time base */
         return;
     }
-
-    // #ifdef TTIM_TIMEBASE_TYPE
-    //     is_running = TTIM_TIMEBASE_IS_RUNNING( &time_base_obj );
-    // #else
-    //     is_running = TTIM_TIMEBASE_IS_RUNNING();
-    // #endif
-
-    // printf("time = %d is runn = %d\n", time, is_running);
 
 #ifdef TTIM_TIMEBASE_TYPE
     TTIM_TIMEBASE_START( &time_base_obj, time );
@@ -593,7 +584,7 @@ ttim_node_t *_ttim_find_by_time( ttim_node_t *list_node, TTIM_COUNT_T count_to, 
 
     return list_node;
 }
-// TTIM_STATIC TTIM_COUNT_T _ttim_list_remove_first( ttim_list_t *list )
+
 
 /**
    @brief Inserts a timer with an final count, into the provided list.
