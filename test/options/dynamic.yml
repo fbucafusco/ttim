@@ -1,5 +1,4 @@
-
-
 :defines:
     :test:
-        - TEST_DYNAMIC
+    - TEST_DYNAMIC
+

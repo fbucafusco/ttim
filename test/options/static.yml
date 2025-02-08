@@ -1,5 +1,3 @@
-
-
 :defines:
     :test:
-        - TEST_STATIC
+    - TEST_STATIC

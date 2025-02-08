@@ -1,4 +1,3 @@
-
 image: ubuntu:latest
 
 before_script:
@@ -17,7 +16,8 @@ test_static:
    script:
       - cd test
       - ceedling clean
-      - ceedling options:static gcov:all utils:gcov
+      - ceedling test:all gcov:all --verbosity=7 --mixin=options/static.yml 
+
    artifacts:
     paths:
       - test/build/*
@@ -26,7 +26,7 @@ test_static_periodic_tick:
    script:
       - cd test
       - ceedling clean
-      - ceedling options:static_periodic_tick gcov:all utils:gcov
+      - ceedling test:all gcov:all --verbosity=7 --mixin=options/static_periodic_tick.yml      
    artifacts:
     paths:
       - test/build/*
@@ -35,7 +35,10 @@ test_dynamic:
    script:
       - cd test
       - ceedling clean
-      - ceedling options:dynamic gcov:all utils:gcov
+      - ceedling test:all gcov:all --verbosity=7 --mixin=options/dynamic.yml 
    artifacts:
     paths:
       - test/build/*
+
+
+      

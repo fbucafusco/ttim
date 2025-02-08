@@ -1,0 +1,27 @@
+:flags:
+  :test:
+    :compile:
+      :*:
+        - -fprofile-arcs
+        - -ftest-coverage
+    :link:
+      :*:
+        - -fprofile-arcs
+        - -ftest-coverage
+
+:plugins:
+  :enabled:
+    - gcov
+
+:gcov:
+  :reports:
+    - HtmlDetailed
+    - text
+  :utilities:
+    - gcovr
+    
+  :gcovr:
+    :report_root: "../../"
+    :report_exclude: "^build/|^test"
+    :html_artifact_filename: coverage_report.html
+    :text_artifact_filename: coverage_report.txt
