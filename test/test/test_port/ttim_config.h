@@ -1,8 +1,8 @@
 #ifndef TTIM_CONFIG_H
 #define TTIM_CONFIG_H
 
-#include "unity.h"
 #include "ttim_abstraction.h"
+#include "unity.h"
 
 #define DEBUG_DURING_TESTING        0
 #define TTIM_STATIC
@@ -24,7 +24,6 @@
 #define TTIM_MALLOC(SIZE)               malloc(SIZE)
 #define TTIM_FREE(PTR)                  free(PTR)
 #endif
-
 
 /* Critical section */
 #define TTIM_CRITICAL_START()           test_crtical_start( __FUNCTION__ , __LINE__ );

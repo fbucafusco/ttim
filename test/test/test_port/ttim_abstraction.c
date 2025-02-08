@@ -1,6 +1,6 @@
-
 #include "ttim.h"
 #include "ttim_abstraction.h"
+#include <stdio.h>
 
 extern TTIM_TIMEBASE_TYPE time_base_obj;
 

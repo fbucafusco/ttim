@@ -18,12 +18,12 @@
     # - ../src    
   :test:
     - +:test/**
-    - -:test/support
+    # - -:test/support
   :source:
     - ../src/**
     # - ../inc/**
   :support:
-    - test/support
+    - test/test_port
 
 :mixins:            
   :enabled:         
@@ -52,7 +52,6 @@
     uint32:   UINT32
     int8:     INT8
     bool:     UINT8
-
 
 :flags:
   :test:

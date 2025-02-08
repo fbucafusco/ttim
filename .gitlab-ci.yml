@@ -40,5 +40,19 @@ test_dynamic:
     paths:
       - test/build/*
 
+test_cmake:
+  stage: test
+  script:
+    - apt-get update && apt-get -yq install cmake
+    - cd test/test/test_cmake
+    - mkdir -p build && cd build
+    - cmake ..
+    - make    
+    - ctest --output-on-failure
+  artifacts:
+    paths:
+      - cmake_program/build/*
+
+
 
       

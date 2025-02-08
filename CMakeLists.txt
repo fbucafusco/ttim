@@ -35,10 +35,12 @@ target_include_directories(
     ttim 
     PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/inc
+if (not CONFIG_FOUND)    
     ${TTIM_CONFIG_PATH}  # Provided configuration path
+endif()
 )
 
 # Link additional sources from config if available
-if (CONFIG_FOUND AND TARGET ttim_config)
-    target_link_libraries(ttim PRIVATE ttim_config)
+if (CONFIG_FOUND)
+    target_link_libraries(ttim PUBLIC ttim_config)
 endif()

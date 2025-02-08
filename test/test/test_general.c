@@ -1331,7 +1331,7 @@ void test_tim_periodic()
 }
 
 
-#if 0
+#ifdef NO_CEEDLING
 /**
    @brief Main test function
 
