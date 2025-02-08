@@ -1,5 +1,36 @@
 #include <stdlib.h>
+
 #include "ttim.h"
+
+/* VALIDATIONS ******************************************************************* */
+#if TTIM_MM_MODE == TTIM_MM_MODE_DYNAMIC && (!defined(TTIM_MALLOC) || !defined(TTIM_FREE))
+#error For TTIM_MM_MODE_DYNAMIC ttim_config.h must define wrappers TTIM_MALLOC and TTIM_FREE
+#endif
+
+#if TTIM_MM_MODE == TTIM_MM_MODE_STATIC && (!defined(TTIM_COUNT))
+#error For TTIM_MM_MODE_STATIC ttim_config.h must define TTIM_COUNT
+#endif
+
+#if TTIM_PERIODIC_TICK == 1
+#ifndef TTIM_TIMEBASE_ELAPSED
+#error TTIM_TIMEBASE_ELAPSED in ttim_config.h is not needed
+#endif
+#ifndef TTIM_RESOLUTION
+#error For TTIM_PERIODIC_TICK==1 ttim_config.h must define TTIM_RESOLUTION that will be used to start the timer via TTIM_TIMEBASE_START macro.
+#endif
+#endif
+
+#ifndef TTIM_TIMEBASE_IS_RUNNING
+#error ttim_config.h must define wrappers for TTIM_TIMEBASE_IS_RUNNING
+#endif
+
+#ifndef TTIM_TIMEBASE_STOP
+#error ttim_config.h must define wrappers for TTIM_TIMEBASE_STOP
+#endif
+
+#ifndef TTIM_TIMEBASE_START
+#error ttim_config.h must define wrappers for TTIM_TIMEBASE_START
+#endif
 
 /**
    @brief STATES OF EACH TIMER
@@ -1230,34 +1261,6 @@ void ttim_print_stats()
 }
 #endif
 
-/* VALIDATIONS ******************************************************************* */
-#if TTIM_MM_MODE == TTIM_MM_MODE_DYNAMIC && (!defined(TTIM_MALLOC) || !defined(TTIM_FREE))
-#error For TTIM_MM_MODE_DYNAMIC ttim_config.h must define wrappers TTIM_MALLOC and TTIM_FREE
-#endif
 
-#if TTIM_MM_MODE == TTIM_MM_MODE_STATIC && (!defined(TTIM_COUNT))
-#error For TTIM_MM_MODE_STATIC ttim_config.h must define TTIM_COUNT
-#endif
-
-#if TTIM_PERIODIC_TICK == 1
-#ifndef TTIM_TIMEBASE_ELAPSED
-#error TTIM_TIMEBASE_ELAPSED in ttim_config.h is not needed
-#endif
-#ifndef TTIM_RESOLUTION
-#error For TTIM_PERIODIC_TICK==1 ttim_config.h must define TTIM_RESOLUTION that will be used to start the timer via TTIM_TIMEBASE_START macro.
-#endif
-#endif
-
-#ifndef TTIM_TIMEBASE_IS_RUNNING
-#error ttim_config.h must define wrappers for TTIM_TIMEBASE_IS_RUNNING
-#endif
-
-#ifndef TTIM_TIMEBASE_STOP
-#error ttim_config.h must define wrappers for TTIM_TIMEBASE_STOP
-#endif
-
-#ifndef TTIM_TIMEBASE_START
-#error ttim_config.h must define wrappers for TTIM_TIMEBASE_START
-#endif
 
 /* v1.05 */
