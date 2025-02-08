@@ -6,7 +6,7 @@ before_script:
   - apt-get -yq update
   - apt-get -yq install python3.6 python3-pip
   - apt-get -yq install ruby-full
-  - pip install gcovr
+  - pip install gcovr --break-system-packages
   - gem install ceedling
   - ceedling version
   - gcov --version
