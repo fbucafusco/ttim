@@ -14,7 +14,7 @@ unit_test_static:
    stage: test
    script:
       - cd test
-      - ceedling clean
+      - ceedling clean --project=unit_tests.yml
       - ceedling test:all gcov:all --project=unit_tests.yml --verbosity=7 --mixin=options/static.yml 
 
    artifacts:
@@ -25,7 +25,7 @@ unit_test_static_periodic_tick:
    stage: test
    script:
       - cd test
-      - ceedling clean
+      - ceedling clean --project=unit_tests.yml
       - ceedling test:all gcov:all --project=unit_tests.yml --verbosity=7 --mixin=options/static_periodic_tick.yml      
    artifacts:
     paths:
@@ -35,7 +35,7 @@ unit_test_dynamic:
    stage: test
    script:
       - cd test
-      - ceedling clean
+      - ceedling clean --project=unit_tests.yml
       - ceedling test:all gcov:all --project=unit_tests.yml --verbosity=7 --mixin=options/dynamic.yml 
    artifacts:
     paths:
