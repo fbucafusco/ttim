@@ -16,10 +16,10 @@ FetchContent_MakeAvailable(Unity)
 add_compile_definitions(TEST_STATIC NO_CEEDLING)
 
 # add the ttim root lib with the configuration of it. 
-set(TTIM_CONFIG_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../test/test_port)
+set(TTIM_CONFIG_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../unit_tests/test_port)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../../  "${CMAKE_BINARY_DIR}/ttim_build" )
 
-add_executable(test_cmake ${CMAKE_CURRENT_SOURCE_DIR}/../test/test_general.c )
+add_executable(test_cmake ${CMAKE_CURRENT_SOURCE_DIR}/../unit_tests/test_general.c )
 target_link_libraries(test_cmake PUBLIC ttim unity)
 
 enable_testing()

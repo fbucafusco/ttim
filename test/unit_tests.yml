@@ -15,15 +15,12 @@
 :paths:
   :include:
     - ../inc/**
-    # - ../src    
   :test:
-    - +:test/**
-    # - -:test/support
+    - +:unit_tests/**
   :source:
     - ../src/**
-    # - ../inc/**
   :support:
-    - test/test_port
+    - unit_tests/test_port
 
 :mixins:            
   :enabled:         

@@ -1,6 +1,9 @@
-#include "ttim.h"
 #include "ttim_abstraction.h"
+
 #include <stdio.h>
+
+#include "ttim.h"
+#include "unity.h"
 
 extern TTIM_TIMEBASE_TYPE time_base_obj;
 
@@ -46,7 +49,7 @@ void timebase_init( mcu_timer_t *hnd )
 {
     hnd->timeout = TTIM_TIMEOUT_INVALID;
     hnd->elapsed = 0;
-    hnd->flags = 0;
+    hnd->flags   = 0;
 }
 
 void timebase_start( mcu_timer_t *hnd, uint32_t time )
@@ -129,7 +132,7 @@ int32_t timebase_timedout( mcu_timer_t *hnd )
 void timebase_stop( mcu_timer_t *hnd )
 {
     ( hnd )->timeout = TTIM_TIMEOUT_INVALID;
-    hnd->elapsed = 0;
+    hnd->elapsed     = 0;
     ( hnd )->flags &= ~TIMER_RUNNING_FLAG;
 }
 

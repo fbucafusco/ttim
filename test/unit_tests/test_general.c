@@ -1,7 +1,8 @@
 #include <string.h>
-#include "unity.h"
+
 #include "ttim.h"
 #include "ttim_abstraction.h"
+#include "unity.h"
 
 /* handlers for testing static allocation */
 enum
@@ -13,26 +14,20 @@ enum
 };
 
 extern TTIM_TIMEBASE_TYPE time_base_obj;
-extern ttim_list_t ttim_list;
 extern const ttim_t ttim_group[];
-char activations[4];
-uint16_t print_idx;
-int isr_dis;
+char                activations[4];
+
+int        isr_dis;
 TTIM_HND_T hnd_group[4];
 
-TTIM_COUNT_T _ttim_remaining_time( TTIM_HND_T hnd );
-bool _ttim_is_any_running();
-bool _ttim_is_paused( TTIM_HND_T hnd );
-bool _ttim_is_stopped( TTIM_HND_T hnd );
-bool _ttim_node_is_valid( ttim_t *node );
-bool _ttim_time_is_valid( TTIM_COUNT_T time );
-TTIM_HND_T _ttim_get_hnd( void *ptr );
-
-#if DEBUG_DURING_TESTING == 1
-#define PRINTF(...) printf(__VA_ARGS__)
-#else
-#define PRINTF(...)
-#endif
+/* expose internal functions  */
+TTIM_COUNT_T _ttim_get_timer_offset( TTIM_HND_T hnd );
+bool         _ttim_is_any_running();
+bool         _ttim_is_paused( TTIM_HND_T hnd );
+bool         _ttim_is_stopped( TTIM_HND_T hnd );
+bool         _ttim_node_is_valid( ttim_t *node );
+bool         _ttim_time_is_valid( TTIM_COUNT_T time );
+TTIM_HND_T   _ttim_get_hnd( void *ptr );
 
 void setUp()
 {
@@ -51,13 +46,13 @@ void setUp()
     hnd_group[3] = TTIM_03;
 #elif TTIM_MM_MODE == TTIM_MM_MODE_DYNAMIC
     /* TIMER hnd_group ARE POINTERS, AND MUST BE CREATED IN RUNTIME */
-    hnd_group[0] = ttim_ctor( 0 );
-    hnd_group[1] = ttim_ctor( 0 );
-    hnd_group[2] = ttim_ctor( 0 );
-    hnd_group[3] = ttim_ctor( 0 );
+    hnd_group[0] = ttim_ctor( TTIM_INVALID_HND );
+    hnd_group[1] = ttim_ctor( TTIM_INVALID_HND );
+    hnd_group[2] = ttim_ctor( TTIM_INVALID_HND );
+    hnd_group[3] = ttim_ctor( TTIM_INVALID_HND );
 #endif
 
-    print_idx = 0;
+    // print_idx = 0;
 
     PRINTF( "\n" );
 }
@@ -118,8 +113,6 @@ void tim_callback( TTIM_HND_T hnd, void *param )
     /* TIMER hnd_group ARE INDEXES */
     activations[hnd]++;
 #elif TTIM_MM_MODE == TTIM_MM_MODE_DYNAMIC
-    /* TIMER hnd_group ARE POINTERS, AND MUST BE CREATED IN RUNTIME */
-
     for ( int i = 0; i < 4; i++ )
     {
         if ( hnd == hnd_group[i] )
@@ -140,39 +133,6 @@ void tim_callback_active( TTIM_HND_T hnd, void *param )
 }
 #endif
 
-void print_tim_list()
-{
-    ttim_node_t *node = &ttim_list.entry;
-    TTIM_COUNT_T temp = node->t;
-
-    PRINTF( "[%02u] el: %02u tb: %02u {", print_idx, timebase_get_elapsed( &time_base_obj ), node->t );
-    print_idx++;
-
-    while ( 1 )
-    {
-        node = node->next;
-
-        if ( !_ttim_node_is_valid( ( ttim_t * )node ) )
-        {
-            break;
-        }
-
-        TTIM_HND_T hnd = _ttim_get_hnd( node );
-
-        PRINTF( "%u (to: %2u d: %2d) ", hnd, temp, ( _ttim_time_is_valid( node->t ) ? node->t : -1 ) );
-
-        temp += node->t;
-
-        if ( _ttim_node_is_valid( ( ttim_t * )node->next ) )
-        {
-            PRINTF( " -> " );
-        }
-    }
-
-    PRINTF( "}\n" );
-    fflush( stdout );
-}
-
 /**
    @brief Tests basic eavios, and internal timer states
 
@@ -186,7 +146,6 @@ void test_ttim_basica()
 #if TTIM_MM_MODE == TTIM_MM_MODE_STATIC
     TEST_ASSERT_EQUAL( TTIM_INVALID_HND, ttim_ctor( TTIM_INVALID_HND ) );
 #elif TTIM_MM_MODE == TTIM_MM_MODE_DYNAMIC
-    // TEST_ASSERT_EQUAL( TTIM_INVALID_HND, ttim_ctor( TTIM_INVALID_HND ) );
 #endif
 
     /* general init states */
@@ -233,34 +192,36 @@ void test_ttim_basica()
     TEST_ASSERT_FALSE( _ttim_is_paused( hnd_group[2] ) );
     TEST_ASSERT_FALSE( _ttim_is_paused( hnd_group[3] ) );
 
-    print_tim_list(); // 0
+    ttim_print_pending();  // 0
 
     simulate_ticks( 6 );
 
-    print_tim_list(); // 1
+    ttim_print_pending();  // 1
 
     ttim_start( hnd_group[2] );
 
-    print_tim_list(); // 2
+    ttim_print_pending();  // 2
+
+    // printf("periodi tick enabled %u\n", TTIM_PERIODIC_TICK);
 
 #if TTIM_PERIODIC_TICK == 0
-    TEST_ASSERT_EQUAL( 10, _ttim_remaining_time( hnd_group[0] ) );
-    TEST_ASSERT_EQUAL( 17, _ttim_remaining_time( hnd_group[1] ) );
-    TEST_ASSERT_EQUAL( 21, _ttim_remaining_time( hnd_group[2] ) );
-    TEST_ASSERT_EQUAL( 33, _ttim_remaining_time( hnd_group[3] ) );
+    TEST_ASSERT_EQUAL( 10, _ttim_get_timer_offset( hnd_group[0] ) );
+    TEST_ASSERT_EQUAL( 17, _ttim_get_timer_offset( hnd_group[1] ) );
+    TEST_ASSERT_EQUAL( 21, _ttim_get_timer_offset( hnd_group[2] ) );
+    TEST_ASSERT_EQUAL( 33, _ttim_get_timer_offset( hnd_group[3] ) );
 #endif
 
     /* hnd_group[2] restart with the same number of ticks the internal timer values should be the same as before  */
 
     ttim_set( hnd_group[2], 15, NULL, NULL );
 
-    print_tim_list(); // 3 - this printout should be equal than the nro 1
+    ttim_print_pending();  // 3 - this printout should be equal than the nro 1
 
 #if TTIM_PERIODIC_TICK == 0
-    TEST_ASSERT_EQUAL( 10, _ttim_remaining_time( hnd_group[0] ) );
-    TEST_ASSERT_EQUAL( 17, _ttim_remaining_time( hnd_group[1] ) );
-    TEST_ASSERT_EQUAL( 21, _ttim_remaining_time( hnd_group[2] ) );
-    TEST_ASSERT_EQUAL( 33, _ttim_remaining_time( hnd_group[3] ) );
+    TEST_ASSERT_EQUAL( 10, _ttim_get_timer_offset( hnd_group[0] ) );
+    TEST_ASSERT_EQUAL( 17, _ttim_get_timer_offset( hnd_group[1] ) );
+    TEST_ASSERT_EQUAL( 21, _ttim_get_timer_offset( hnd_group[2] ) );
+    TEST_ASSERT_EQUAL( 33, _ttim_get_timer_offset( hnd_group[3] ) );
 #endif
 
     TEST_ASSERT_EQUAL( 4, ttim_get_remining_time( hnd_group[0] ) );
@@ -282,43 +243,43 @@ void test_ttim_basicb()
     ttim_start( hnd_group[1] );
     ttim_start( hnd_group[2] );
 
-    print_tim_list(); // 0
+    ttim_print_pending();  // 0
 
     simulate_ticks( 5 );
 
     ttim_start( hnd_group[3] );
 
-    print_tim_list(); // 1
+    ttim_print_pending();  // 1
 
 #if TTIM_PERIODIC_TICK == 0
-    TEST_ASSERT_EQUAL( 5, _ttim_remaining_time( hnd_group[0] ) );
-    TEST_ASSERT_EQUAL( 15, _ttim_remaining_time( hnd_group[1] ) );
-    TEST_ASSERT_EQUAL( 25, _ttim_remaining_time( hnd_group[2] ) );
-    TEST_ASSERT_EQUAL( 3, _ttim_remaining_time( hnd_group[3] ) );
+    TEST_ASSERT_EQUAL( 5, _ttim_get_timer_offset( hnd_group[0] ) );
+    TEST_ASSERT_EQUAL( 15, _ttim_get_timer_offset( hnd_group[1] ) );
+    TEST_ASSERT_EQUAL( 25, _ttim_get_timer_offset( hnd_group[2] ) );
+    TEST_ASSERT_EQUAL( 3, _ttim_get_timer_offset( hnd_group[3] ) );
 #endif
 
     /* hnd_group[1] restarts with a different time. The running list updates all its t time values */
     ttim_set( hnd_group[1], 2, NULL, NULL );
 
-    print_tim_list(); // 2
+    ttim_print_pending();  // 2
 
 #if TTIM_PERIODIC_TICK == 0
-    TEST_ASSERT_EQUAL( 5, _ttim_remaining_time( hnd_group[0] ) );
-    TEST_ASSERT_EQUAL( 2, _ttim_remaining_time( hnd_group[1] ) );
-    TEST_ASSERT_EQUAL( 25, _ttim_remaining_time( hnd_group[2] ) );
-    TEST_ASSERT_EQUAL( 3, _ttim_remaining_time( hnd_group[3] ) );
+    TEST_ASSERT_EQUAL( 5, _ttim_get_timer_offset( hnd_group[0] ) );
+    TEST_ASSERT_EQUAL( 2, _ttim_get_timer_offset( hnd_group[1] ) );
+    TEST_ASSERT_EQUAL( 25, _ttim_get_timer_offset( hnd_group[2] ) );
+    TEST_ASSERT_EQUAL( 3, _ttim_get_timer_offset( hnd_group[3] ) );
 #endif
 
     /* Add 1 tick, the running list keep intact all its t time values */
     simulate_ticks( 1 );
 
-    print_tim_list(); // 3
+    ttim_print_pending();  // 3
 
 #if TTIM_PERIODIC_TICK == 0
-    TEST_ASSERT_EQUAL( 5, _ttim_remaining_time( hnd_group[0] ) );
-    TEST_ASSERT_EQUAL( 2, _ttim_remaining_time( hnd_group[1] ) );
-    TEST_ASSERT_EQUAL( 25, _ttim_remaining_time( hnd_group[2] ) );
-    TEST_ASSERT_EQUAL( 3, _ttim_remaining_time( hnd_group[3] ) );
+    TEST_ASSERT_EQUAL( 5, _ttim_get_timer_offset( hnd_group[0] ) );
+    TEST_ASSERT_EQUAL( 2, _ttim_get_timer_offset( hnd_group[1] ) );
+    TEST_ASSERT_EQUAL( 25, _ttim_get_timer_offset( hnd_group[2] ) );
+    TEST_ASSERT_EQUAL( 3, _ttim_get_timer_offset( hnd_group[3] ) );
 #endif
 
     TEST_ASSERT_EQUAL( 4, ttim_get_remining_time( hnd_group[0] ) );
@@ -330,16 +291,16 @@ void test_ttim_basicb()
        The running list updates all its t time values */
     simulate_ticks( 1 );
 
-    print_tim_list(); // 4
+    ttim_print_pending();  // 4
 
 #if TTIM_PERIODIC_TICK == 0
-    TEST_ASSERT_EQUAL( 3, _ttim_remaining_time( hnd_group[0] ) );
-    TEST_ASSERT_FALSE( _ttim_time_is_valid( _ttim_remaining_time( hnd_group[1] ) ) );
-    TEST_ASSERT_EQUAL( 23, _ttim_remaining_time( hnd_group[2] ) );
-    TEST_ASSERT_EQUAL( 1, _ttim_remaining_time( hnd_group[3] ) );
+    TEST_ASSERT_EQUAL( 3, _ttim_get_timer_offset( hnd_group[0] ) );
+    TEST_ASSERT_FALSE( _ttim_time_is_valid( _ttim_get_timer_offset( hnd_group[1] ) ) );
+    TEST_ASSERT_EQUAL( 23, _ttim_get_timer_offset( hnd_group[2] ) );
+    TEST_ASSERT_EQUAL( 1, _ttim_get_timer_offset( hnd_group[3] ) );
 
     TEST_ASSERT_EQUAL( 3, ttim_get_remining_time( hnd_group[0] ) );
-    TEST_ASSERT_FALSE( _ttim_time_is_valid( _ttim_remaining_time( hnd_group[1] ) ) );
+    TEST_ASSERT_FALSE( _ttim_time_is_valid( _ttim_get_timer_offset( hnd_group[1] ) ) );
     TEST_ASSERT_EQUAL( 23, ttim_get_remining_time( hnd_group[2] ) );
     TEST_ASSERT_EQUAL( 1, ttim_get_remining_time( hnd_group[3] ) );
 #endif
@@ -353,7 +314,7 @@ void test_ttim_basicb()
     TEST_ASSERT_FALSE( ttim_is_stopped( hnd_group[2] ) );
     TEST_ASSERT_FALSE( ttim_is_stopped( hnd_group[3] ) );
 
-    print_tim_list(); // 5
+    ttim_print_pending();  // 5
 }
 
 /**
@@ -392,7 +353,7 @@ void test_ttim_simple_callback()
 
     TEST_ASSERT_EQUAL( 0, isr_dis );
 
-    TEST_ASSERT_TRUE( TTIM_TIMEBASE_IS_RUNNING( &time_base_obj ) ); // timebase is turned on
+    TEST_ASSERT_TRUE( TTIM_TIMEBASE_IS_RUNNING( &time_base_obj ) );  // timebase is turned on
 
     ttim_start( hnd_group[1] );
 
@@ -402,7 +363,7 @@ void test_ttim_simple_callback()
 
     TEST_ASSERT_EQUAL( 0, isr_dis );
 
-    TEST_ASSERT_TRUE( TTIM_TIMEBASE_IS_RUNNING( &time_base_obj ) ); // timebase is turned on
+    TEST_ASSERT_TRUE( TTIM_TIMEBASE_IS_RUNNING( &time_base_obj ) );  // timebase is turned on
     TEST_ASSERT_TRUE( _ttim_is_any_running() );
 
     /* hnd_group[1] must timeout*/
@@ -451,7 +412,7 @@ void test_ttim_simple_callback()
 }
 
 /**
-   @brief  tries _ttim_remaining_time
+   @brief  tries _ttim_get_timer_offset
            low level method
  */
 void test_ttim_low_level()
@@ -463,22 +424,22 @@ void test_ttim_low_level()
     ttim_set( hnd_group[2], 40, NULL, NULL );
     ttim_set( hnd_group[3], 20, NULL, NULL );
 
-    TEST_ASSERT_FALSE( _ttim_time_is_valid( _ttim_remaining_time( hnd_group[0] ) ) );
-    TEST_ASSERT_FALSE( _ttim_time_is_valid( _ttim_remaining_time( hnd_group[1] ) ) );
-    TEST_ASSERT_FALSE( _ttim_time_is_valid( _ttim_remaining_time( hnd_group[2] ) ) );
-    TEST_ASSERT_FALSE( _ttim_time_is_valid( _ttim_remaining_time( hnd_group[3] ) ) );
+    TEST_ASSERT_FALSE( _ttim_time_is_valid( _ttim_get_timer_offset( hnd_group[0] ) ) );
+    TEST_ASSERT_FALSE( _ttim_time_is_valid( _ttim_get_timer_offset( hnd_group[1] ) ) );
+    TEST_ASSERT_FALSE( _ttim_time_is_valid( _ttim_get_timer_offset( hnd_group[2] ) ) );
+    TEST_ASSERT_FALSE( _ttim_time_is_valid( _ttim_get_timer_offset( hnd_group[3] ) ) );
 
     ttim_start( hnd_group[0] );
     ttim_start( hnd_group[1] );
     ttim_start( hnd_group[2] );
     TEST_ASSERT_EQUAL( 0, isr_dis );
 
-    print_tim_list(); // 0
+    ttim_print_pending();  // 0
 
     /* 2 ticks , no timeouts */
     simulate_ticks( 2 );
 
-    print_tim_list(); // 1
+    ttim_print_pending();  // 1
 
     TEST_ASSERT_EQUAL( 8, ttim_get_remining_time( hnd_group[0] ) );
     TEST_ASSERT_EQUAL( 3, ttim_get_remining_time( hnd_group[1] ) );
@@ -488,7 +449,7 @@ void test_ttim_low_level()
     /* 6 ticks,   hnd_group[1] must timeout */
     simulate_ticks( 6 );
 
-    print_tim_list(); // 2
+    ttim_print_pending();  // 2
 
     TEST_ASSERT_EQUAL( 2, ttim_get_remining_time( hnd_group[0] ) );
     TEST_ASSERT_FALSE( _ttim_time_is_valid( ttim_get_remining_time( hnd_group[1] ) ) );
@@ -502,12 +463,12 @@ void test_ttim_low_level()
     ttim_start( hnd_group[1] );
     TEST_ASSERT_EQUAL( 0, isr_dis );
 
-    print_tim_list(); // 3
+    ttim_print_pending();  // 3
 
     /* 6 ticks, hnd_group[0] and  hnd_group[1] must timeout */
     simulate_ticks( 6 );
 
-    print_tim_list(); // 4
+    ttim_print_pending();  // 4
 
     TEST_ASSERT_FALSE( _ttim_time_is_valid( ttim_get_remining_time( hnd_group[0] ) ) );
     TEST_ASSERT_FALSE( _ttim_time_is_valid( ttim_get_remining_time( hnd_group[1] ) ) );
@@ -528,14 +489,14 @@ void test_ttim_stopping()
     ttim_set( hnd_group[2], 40, NULL, NULL );
     ttim_set( hnd_group[3], 20, NULL, NULL );
 
-    TEST_ASSERT_TRUE( TTIM_TIMEBASE_IS_STOPPED( &time_base_obj ) ); // timebase is turned off
+    TEST_ASSERT_TRUE( TTIM_TIMEBASE_IS_STOPPED( &time_base_obj ) );  // timebase is turned off
 
     /* stops hnd_group[1] */
     ttim_stop( hnd_group[1] );
 
     TEST_ASSERT_EQUAL( 0, isr_dis );
 
-    TEST_ASSERT_TRUE( TTIM_TIMEBASE_IS_STOPPED( &time_base_obj ) ); // timebase is turned off
+    TEST_ASSERT_TRUE( TTIM_TIMEBASE_IS_STOPPED( &time_base_obj ) );  // timebase is turned off
 
     TEST_ASSERT_FALSE( _ttim_time_is_valid( ttim_get_remining_time( hnd_group[0] ) ) );
     TEST_ASSERT_FALSE( _ttim_time_is_valid( ttim_get_remining_time( hnd_group[1] ) ) );
@@ -544,16 +505,16 @@ void test_ttim_stopping()
 
     ttim_start( hnd_group[0] );
 
-    print_tim_list(); // 0
+    ttim_print_pending();  // 0
 
     TEST_ASSERT_EQUAL( 0, isr_dis );
 
-    TEST_ASSERT_TRUE( TTIM_TIMEBASE_IS_RUNNING( &time_base_obj ) ); // timebase is turned on
+    TEST_ASSERT_TRUE( TTIM_TIMEBASE_IS_RUNNING( &time_base_obj ) );  // timebase is turned on
 
     /* stops hnd_group[0] */
     ttim_stop( hnd_group[0] );
 
-    print_tim_list(); // 1
+    ttim_print_pending();  // 1
 
     TEST_ASSERT_EQUAL( 0, isr_dis );
 
@@ -568,19 +529,19 @@ void test_ttim_stopping()
 
     TEST_ASSERT_EQUAL( 0, isr_dis );
 
-    print_tim_list(); // 2
+    ttim_print_pending();  // 2
 
     /* stops hnd_group[0] */
     ttim_stop( hnd_group[0] );
 
-    print_tim_list(); // 3
+    ttim_print_pending();  // 3
 
     TEST_ASSERT_EQUAL( 0, isr_dis );
 
     /* 6 ticks,  hnd_group[1] must timeout */
     simulate_ticks( 6 );
 
-    print_tim_list(); // 4
+    ttim_print_pending();  // 4
 
     TEST_ASSERT_FALSE( _ttim_time_is_valid( ttim_get_remining_time( hnd_group[0] ) ) );
     TEST_ASSERT_FALSE( _ttim_time_is_valid( ttim_get_remining_time( hnd_group[1] ) ) );
@@ -591,12 +552,12 @@ void test_ttim_stopping()
     ttim_start( hnd_group[1] );
     TEST_ASSERT_EQUAL( 0, isr_dis );
 
-    print_tim_list(); // 5
+    ttim_print_pending();  // 5
 
     /* 3 ticks */
     simulate_ticks( 3 );
 
-    print_tim_list(); // 6   hasta aca correcto
+    ttim_print_pending();  // 6   hasta aca correcto
 
     TEST_ASSERT_EQUAL( 7, ttim_get_remining_time( hnd_group[0] ) );
     TEST_ASSERT_EQUAL( 2, ttim_get_remining_time( hnd_group[1] ) );
@@ -606,7 +567,7 @@ void test_ttim_stopping()
     /* stops  hnd_group[1] */
     ttim_stop( hnd_group[1] );
 
-    print_tim_list(); // 7
+    ttim_print_pending();  // 7
 
     TEST_ASSERT_EQUAL( 0, isr_dis );
 
@@ -618,7 +579,7 @@ void test_ttim_stopping()
     /* stops  hnd_group[0] */
     ttim_stop( hnd_group[0] );
 
-    print_tim_list(); // 8
+    ttim_print_pending();  // 8
 
     TEST_ASSERT_EQUAL( 0, isr_dis );
 
@@ -630,14 +591,14 @@ void test_ttim_stopping()
     /* 30 ticks  */
     simulate_ticks( 30 );
 
-    print_tim_list(); // 9
+    ttim_print_pending();  // 9
 
     TEST_ASSERT_FALSE( _ttim_time_is_valid( ttim_get_remining_time( hnd_group[0] ) ) );
     TEST_ASSERT_FALSE( _ttim_time_is_valid( ttim_get_remining_time( hnd_group[1] ) ) );
     TEST_ASSERT_EQUAL( 1, ttim_get_remining_time( hnd_group[2] ) );
     TEST_ASSERT_FALSE( _ttim_time_is_valid( ttim_get_remining_time( hnd_group[3] ) ) );
 
-    TEST_ASSERT_TRUE( TTIM_TIMEBASE_IS_RUNNING( &time_base_obj ) ); // timebase is turned on
+    TEST_ASSERT_TRUE( TTIM_TIMEBASE_IS_RUNNING( &time_base_obj ) );  // timebase is turned on
 }
 
 /**
@@ -656,21 +617,21 @@ void test_ttim_pause_then_start()
     ttim_start( hnd_group[1] );
     ttim_start( hnd_group[2] );
 
-    print_tim_list(); // 0
+    ttim_print_pending();  // 0
 
     /* 6 ticks , hnd_group[1] must timeout */
     simulate_ticks( 6 );
 
-    print_tim_list(); // 1
+    ttim_print_pending();  // 1
 
     ttim_pause( hnd_group[0] );
 
-    print_tim_list(); // 2
+    ttim_print_pending();  // 2
 
     /* 6 ticks , hnd_group[1] must timeout */
     simulate_ticks( 10 );
 
-    print_tim_list(); // 3
+    ttim_print_pending();  // 3
 
     TEST_ASSERT_FALSE( _ttim_time_is_valid( ttim_get_remining_time( hnd_group[0] ) ) );
     TEST_ASSERT_FALSE( _ttim_time_is_valid( ttim_get_remining_time( hnd_group[1] ) ) );
@@ -680,7 +641,7 @@ void test_ttim_pause_then_start()
     /* resumes timer hnd_group[0] */
     ttim_start( hnd_group[0] );
 
-    print_tim_list(); // 4
+    ttim_print_pending();  // 4
 
     TEST_ASSERT_EQUAL( 4, ttim_get_remining_time( hnd_group[0] ) );
     TEST_ASSERT_FALSE( _ttim_time_is_valid( ttim_get_remining_time( hnd_group[1] ) ) );
@@ -710,12 +671,12 @@ void test_ttim_dynamic_behavior()
     ttim_start( hnd_group[1] );
     ttim_start( hnd_group[2] );
 
-    print_tim_list(); // 0
+    ttim_print_pending();  // 0
 
     /*  2  ticks */
     simulate_ticks( 2 );
 
-    print_tim_list(); // 1
+    ttim_print_pending();  // 1
 
     TEST_ASSERT_EQUAL( 8, ttim_get_remining_time( hnd_group[0] ) );
     TEST_ASSERT_EQUAL( 3, ttim_get_remining_time( hnd_group[1] ) );
@@ -725,7 +686,7 @@ void test_ttim_dynamic_behavior()
     /*  2  ticks, hnd_group[0] and hnd_group[1] must timeout */
     simulate_ticks( 10 );
 
-    print_tim_list(); // 2
+    ttim_print_pending();  // 2
 
     TEST_ASSERT_FALSE( _ttim_time_is_valid( ttim_get_remining_time( hnd_group[0] ) ) );
     TEST_ASSERT_FALSE( _ttim_time_is_valid( ttim_get_remining_time( hnd_group[1] ) ) );
@@ -737,13 +698,13 @@ void test_ttim_dynamic_behavior()
 
     TEST_ASSERT_FALSE( _ttim_time_is_valid( ttim_get_remining_time( hnd_group[2] ) ) );
 
-    print_tim_list(); // 3
+    ttim_print_pending();  // 3
 
     ttim_stop( hnd_group[2] );
     ttim_start( hnd_group[2] );
     ttim_start( hnd_group[3] );
 
-    print_tim_list(); // 4
+    ttim_print_pending();  // 4
 
     TEST_ASSERT_FALSE( _ttim_time_is_valid( ttim_get_remining_time( hnd_group[0] ) ) );
     TEST_ASSERT_FALSE( _ttim_time_is_valid( ttim_get_remining_time( hnd_group[1] ) ) );
@@ -753,7 +714,7 @@ void test_ttim_dynamic_behavior()
     /*  21 ticks,   hnd_group[3] must timeout */
     simulate_ticks( 21 );
 
-    print_tim_list(); // 5
+    ttim_print_pending();  // 5
 
     TEST_ASSERT_FALSE( _ttim_time_is_valid( ttim_get_remining_time( hnd_group[0] ) ) );
     TEST_ASSERT_FALSE( _ttim_time_is_valid( ttim_get_remining_time( hnd_group[1] ) ) );
@@ -792,27 +753,27 @@ void test_ttim_starting()
 
     ttim_start( hnd_group[0] );
 
-    print_tim_list(); // 0
+    ttim_print_pending();  // 0
 
     ttim_start( hnd_group[0] );
 
-    print_tim_list(); // 1
+    ttim_print_pending();  // 1
 
     ttim_start( hnd_group[1] );
 
-    print_tim_list(); // 2
+    ttim_print_pending();  // 2
 
     ttim_start( hnd_group[1] );
 
-    print_tim_list(); // 3
+    ttim_print_pending();  // 3
 
     ttim_start( hnd_group[2] );
 
-    print_tim_list(); // 4
+    ttim_print_pending();  // 4
 
     ttim_start( hnd_group[2] );
 
-    print_tim_list(); // 5
+    ttim_print_pending();  // 5
 
     /* tickeo 2, ninguno dio timeout */
     simulate_ticks( 2 );
@@ -861,7 +822,7 @@ void test_ttim_set_n_start_usage()
 
     ttim_set_n_start( hnd_group[1], 80, NULL, NULL );
 
-    print_tim_list(); // 0
+    ttim_print_pending();  // 0
 
     TEST_ASSERT_FALSE( _ttim_time_is_valid( ttim_get_remining_time( hnd_group[0] ) ) );
     TEST_ASSERT_EQUAL( 80, ttim_get_remining_time( hnd_group[1] ) );
@@ -871,7 +832,7 @@ void test_ttim_set_n_start_usage()
     ttim_start( hnd_group[1] );
     ttim_start( hnd_group[2] );
 
-    print_tim_list(); // 1
+    ttim_print_pending();  // 1
 
     TEST_ASSERT_EQUAL( 10, ttim_get_remining_time( hnd_group[0] ) );
     TEST_ASSERT_EQUAL( 80, ttim_get_remining_time( hnd_group[1] ) );
@@ -879,7 +840,7 @@ void test_ttim_set_n_start_usage()
 
     simulate_ticks( 2 );
 
-    print_tim_list(); // 2
+    ttim_print_pending();  // 2
 
     TEST_ASSERT_EQUAL( 8, ttim_get_remining_time( hnd_group[0] ) );
     TEST_ASSERT_EQUAL( 78, ttim_get_remining_time( hnd_group[1] ) );
@@ -887,11 +848,11 @@ void test_ttim_set_n_start_usage()
 
     ttim_set_n_start( hnd_group[1], 50, NULL, NULL );
 
-    print_tim_list(); // 3
+    ttim_print_pending();  // 3
 
     ttim_set_n_start( hnd_group[2], 500, NULL, NULL );
 
-    print_tim_list(); // 4
+    ttim_print_pending();  // 4
 
     TEST_ASSERT_EQUAL( 8, ttim_get_remining_time( hnd_group[0] ) );
     TEST_ASSERT_EQUAL( 50, ttim_get_remining_time( hnd_group[1] ) );
@@ -903,7 +864,7 @@ void test_ttim_set_n_start_usage()
     TEST_ASSERT_EQUAL( 48, ttim_get_remining_time( hnd_group[1] ) );
     TEST_ASSERT_EQUAL( 498, ttim_get_remining_time( hnd_group[2] ) );
 
-    print_tim_list(); // 5
+    ttim_print_pending();  // 5
 
     ttim_set_n_start( hnd_group[0], 10, NULL, NULL );
 
@@ -915,7 +876,7 @@ void test_ttim_set_n_start_usage()
 
     ttim_stop( hnd_group[0] );
 
-    print_tim_list(); // 6
+    ttim_print_pending();  // 6
 
     TEST_ASSERT_FALSE( _ttim_time_is_valid( ttim_get_remining_time( hnd_group[0] ) ) );
     TEST_ASSERT_EQUAL( 46, ttim_get_remining_time( hnd_group[1] ) );
@@ -967,24 +928,24 @@ void test_ttim_changing_timebase()
     ttim_set( hnd_group[3], 20, tim_callback, NULL );
 
     {
-        TEST_ASSERT_TRUE( TTIM_TIMEBASE_IS_STOPPED( &time_base_obj ) ); // timebase is turned off
+        TEST_ASSERT_TRUE( TTIM_TIMEBASE_IS_STOPPED( &time_base_obj ) );  // timebase is turned off
 
         /* starts  */
         ttim_start( hnd_group[0] );
         ttim_start( hnd_group[1] );
         ttim_start( hnd_group[2] );
 
-        TEST_ASSERT_TRUE( TTIM_TIMEBASE_IS_RUNNING( &time_base_obj ) ); // timebase is turned on
+        TEST_ASSERT_TRUE( TTIM_TIMEBASE_IS_RUNNING( &time_base_obj ) );  // timebase is turned on
 
         /*  6 ,   hnd_group[1] must timeout */
         simulate_ticks( 6 );
 
-        TEST_ASSERT_TRUE( TTIM_TIMEBASE_IS_RUNNING( &time_base_obj ) ); // timebase is turned on
+        TEST_ASSERT_TRUE( TTIM_TIMEBASE_IS_RUNNING( &time_base_obj ) );  // timebase is turned on
 
         /* stops hnd_group[1] */
         ttim_stop( hnd_group[1] );
 
-        TEST_ASSERT_TRUE( TTIM_TIMEBASE_IS_RUNNING( &time_base_obj ) ); // timebase is turned on
+        TEST_ASSERT_TRUE( TTIM_TIMEBASE_IS_RUNNING( &time_base_obj ) );  // timebase is turned on
 
         /*  */
         TEST_ASSERT_EQUAL( 1, activations[1] );
@@ -992,12 +953,12 @@ void test_ttim_changing_timebase()
         /* 4 ticks ,   hnd_group[0] must timeout   */
         simulate_ticks( 4 );
 
-        TEST_ASSERT_TRUE( TTIM_TIMEBASE_IS_RUNNING( &time_base_obj ) ); // timebase is turned on
+        TEST_ASSERT_TRUE( TTIM_TIMEBASE_IS_RUNNING( &time_base_obj ) );  // timebase is turned on
 
         /* starts hnd_group[1] */
         ttim_start( hnd_group[1] );
 
-        TEST_ASSERT_TRUE( TTIM_TIMEBASE_IS_RUNNING( &time_base_obj ) ); // timebase is turned on
+        TEST_ASSERT_TRUE( TTIM_TIMEBASE_IS_RUNNING( &time_base_obj ) );  // timebase is turned on
 
         /*   */
         TEST_ASSERT_EQUAL( 1, activations[0] );
@@ -1011,19 +972,19 @@ void test_ttim_changing_timebase()
          * TODO: implement the same mechanism to stop de timebase when no timers are running. */
 #else
         /* FOR ONE SHOT TIMER THE TIMEBASE SHOULD BE STOPPED */
-        TEST_ASSERT_TRUE( TTIM_TIMEBASE_IS_STOPPED( &time_base_obj ) ); // timebase is turned off
+        TEST_ASSERT_TRUE( TTIM_TIMEBASE_IS_STOPPED( &time_base_obj ) );  // timebase is turned off
 #endif
     }
 
     {
         /* turns on 3 */
-        ttim_start( hnd_group[0] ); // 10
-        ttim_start( hnd_group[1] ); // 5
-        ttim_start( hnd_group[2] ); // 40
+        ttim_start( hnd_group[0] );  // 10
+        ttim_start( hnd_group[1] );  // 5
+        ttim_start( hnd_group[2] );  // 40
 
         simulate_ticks( 6 );
 
-        TEST_ASSERT_TRUE( TTIM_TIMEBASE_IS_RUNNING( &time_base_obj ) ); // timebase is turned on
+        TEST_ASSERT_TRUE( TTIM_TIMEBASE_IS_RUNNING( &time_base_obj ) );  // timebase is turned on
     }
 }
 
@@ -1127,7 +1088,7 @@ void test_periodic_by_restarting_on_callback()
     /* the hnd_group[2] must timeout, and restart */
     simulate_ticks( 15 );
 
-    print_tim_list(); // 0
+    ttim_print_pending();  // 0
 
     TEST_ASSERT_FALSE( ttim_is_timedout( hnd_group[0] ) );
     TEST_ASSERT_FALSE( ttim_is_timedout( hnd_group[1] ) );
@@ -1273,19 +1234,19 @@ void test_tim_periodic()
     /* try to set periodic an invalid handle */
     ttim_set_periodic( TTIM_INVALID_HND );
 
-    print_tim_list(); // 0
+    ttim_print_pending();  // 0
 
     simulate_ticks( 6 );
 
     /* stop an invalid timer */
     ttim_stop( TTIM_INVALID_HND );
 
-    print_tim_list(); // 1
+    ttim_print_pending();  // 1
 
 #if TTIM_PERIODIC_TICK == 0
-    TEST_ASSERT_EQUAL( 10, _ttim_remaining_time( hnd_group[0] ) );
-    TEST_ASSERT_EQUAL( 17, _ttim_remaining_time( hnd_group[1] ) );
-    TEST_ASSERT_EQUAL( 33, _ttim_remaining_time( hnd_group[3] ) );
+    TEST_ASSERT_EQUAL( 10, _ttim_get_timer_offset( hnd_group[0] ) );
+    TEST_ASSERT_EQUAL( 17, _ttim_get_timer_offset( hnd_group[1] ) );
+    TEST_ASSERT_EQUAL( 33, _ttim_get_timer_offset( hnd_group[3] ) );
 #endif
 
     TEST_ASSERT_EQUAL( 4, ttim_get_remining_time( hnd_group[0] ) );
@@ -1301,7 +1262,7 @@ void test_tim_periodic()
     TEST_ASSERT_EQUAL( 5, ttim_get_remining_time( hnd_group[1] ) );
     TEST_ASSERT_EQUAL( 21, ttim_get_remining_time( hnd_group[3] ) );
 
-    print_tim_list(); // 2
+    ttim_print_pending();  // 2
 
     simulate_ticks( 8 );
 
@@ -1311,7 +1272,7 @@ void test_tim_periodic()
 
     TEST_ASSERT_TRUE( ttim_is_timedout( hnd_group[1] ) );
 
-    print_tim_list(); // 3
+    ttim_print_pending();  // 3
 
     ttim_set_n_start( hnd_group[1], 15, NULL, NULL );
 
@@ -1319,7 +1280,7 @@ void test_tim_periodic()
     TEST_ASSERT_EQUAL( 15, ttim_get_remining_time( hnd_group[1] ) );
     TEST_ASSERT_EQUAL( 13, ttim_get_remining_time( hnd_group[3] ) );
 
-    print_tim_list(); // 4
+    ttim_print_pending();  // 4
 
     simulate_ticks( 13 );
 
@@ -1327,9 +1288,8 @@ void test_tim_periodic()
     TEST_ASSERT_EQUAL( 2, ttim_get_remining_time( hnd_group[1] ) );
     TEST_ASSERT_FALSE( _ttim_time_is_valid( ttim_get_remining_time( hnd_group[3] ) ) );
 
-    print_tim_list(); // 4
+    ttim_print_pending();  // 4
 }
-
 
 #ifdef NO_CEEDLING
 /**
@@ -1341,23 +1301,23 @@ int main()
 {
     UNITY_BEGIN();
 
-    RUN_TEST( test_ttim_equal_timer_values  );
-    RUN_TEST( test_ttim_stop_after_elapsed  );
-    RUN_TEST( test_ttim_basicb  );
+    RUN_TEST( test_ttim_equal_timer_values );
+    RUN_TEST( test_ttim_stop_after_elapsed );
+    RUN_TEST( test_ttim_basicb );
 
     RUN_TEST( test_periodic_by_restarting_on_callback );
     RUN_TEST( test_ttim_timedout );
 
     RUN_TEST( test_ttim_basica );
 
-    RUN_TEST( test_ttim_simple_callback  );
-    RUN_TEST( test_ttim_low_level  );
-    RUN_TEST( test_ttim_stopping  );
-    RUN_TEST( test_ttim_pause_then_start  );
-    RUN_TEST( test_ttim_dynamic_behavior  );
-    RUN_TEST( test_ttim_starting  );
-    RUN_TEST( test_ttim_internal  );
-    RUN_TEST( test_ttim_set_n_start_usage  );
+    RUN_TEST( test_ttim_simple_callback );
+    RUN_TEST( test_ttim_low_level );
+    RUN_TEST( test_ttim_stopping );
+    RUN_TEST( test_ttim_pause_then_start );
+    RUN_TEST( test_ttim_dynamic_behavior );
+    RUN_TEST( test_ttim_starting );
+    RUN_TEST( test_ttim_internal );
+    RUN_TEST( test_ttim_set_n_start_usage );
     RUN_TEST( test_ttim_changing_timebase );
 
     return UNITY_END();

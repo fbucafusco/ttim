@@ -2,10 +2,16 @@
 #define TTIM_CONFIG_H
 
 #include "ttim_abstraction.h"
-#include "unity.h"
+// #include "unity.h"
 
 #define DEBUG_DURING_TESTING        0
 #define TTIM_STATIC
+
+#if DEBUG_DURING_TESTING == 1
+#define PRINTF(...) printf(__VA_ARGS__)
+#else
+#define PRINTF(...)
+#endif
 
 /* GENERAL =============================================================================================================================== */
 // #if DEBUG_DURING_TESTING==1

@@ -40,7 +40,6 @@ if (not CONFIG_FOUND)
 endif()
 )
 
-# Link additional sources from config if available
-if (CONFIG_FOUND)
-    target_link_libraries(ttim PUBLIC ttim_config)
-endif()
+target_compile_options(ttim PUBLIC -O0 -g)
+
+ 
