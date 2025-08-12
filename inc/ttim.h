@@ -164,7 +164,7 @@ bool         ttim_is_timedout( TTIM_HND_T hnd );
 
 #if TTIM_MM_MODE == TTIM_MM_MODE_DYNAMIC
 TTIM_HND_T ttim_ctor( TTIM_HND_T hnd );
-TTIM_HND_T ttim_dtor( TTIM_HND_T hnd );
+void ttim_dtor( TTIM_HND_T hnd );
 #endif
 
 void ttim_print_pending();
