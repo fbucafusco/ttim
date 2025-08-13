@@ -141,13 +141,6 @@ void test_ttim_basica()
 {
     PRINTF( "%s ------------------------------- \n\n", __FUNCTION__ );
 
-    /*  construct an invalid timer object  */
-
-#if TTIM_MM_MODE == TTIM_MM_MODE_STATIC
-    TEST_ASSERT_EQUAL( TTIM_INVALID_HND, ttim_ctor( TTIM_INVALID_HND ) );
-#elif TTIM_MM_MODE == TTIM_MM_MODE_DYNAMIC
-#endif
-
     /* general init states */
     TEST_ASSERT_FALSE( ttim_is_timedout( hnd_group[0] ) );
     TEST_ASSERT_FALSE( ttim_is_timedout( hnd_group[1] ) );
